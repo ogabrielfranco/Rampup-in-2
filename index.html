@@ -3,9 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Rampup IN</title>
-    <meta name="description" content="Calculadora de potencial de networking e índice de negócio" />
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+    <title>Rampup IN | Inteligência de Networking</title>
+    <meta name="description" content="Calculadora estratégica de potencial de networking e índice de negócio" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -19,19 +21,28 @@
               chumbo: {
                 800: '#2d3748',
                 900: '#1a202c',
-                950: '#111827',
+                950: '#0a0f1a',
               },
               verde: {
                 light: '#68D391',
                 neon: '#4ADE80',
+              },
+              brand: {
+                emerald: '#059669',
+                deep: '#064e3b'
               }
             },
             animation: {
-              'fade-in': 'fadeIn 0.5s ease-out',
+              'fade-in': 'fadeIn 0.5s ease-out forwards',
+              'slide-up': 'slideUp 0.4s ease-out forwards',
             },
             keyframes: {
               fadeIn: {
-                '0%': { opacity: '0', transform: 'translateY(10px)' },
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              },
+              slideUp: {
+                '0%': { opacity: '0', transform: 'translateY(20px)' },
                 '100%': { opacity: '1', transform: 'translateY(0)' },
               }
             }
@@ -62,14 +73,26 @@
 }
 </script>
     <style>
+      :root {
+        --font-montserrat: 'Montserrat', sans-serif;
+      }
       body { 
-        font-family: 'Montserrat', sans-serif;
+        font-family: var(--font-montserrat);
         margin: 0;
         padding: 0;
+        -webkit-font-smoothing: antialiased;
       }
+      /* Custom scrollbar */
+      ::-webkit-scrollbar { width: 6px; height: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+      .dark ::-webkit-scrollbar-thumb { background: #334155; }
+      
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
   </head>
-  <body>
+  <body class="bg-gray-50 dark:bg-chumbo-950 transition-colors duration-300">
     <div id="root"></div>
     <script type="module" src="./index.tsx"></script>
   </body>

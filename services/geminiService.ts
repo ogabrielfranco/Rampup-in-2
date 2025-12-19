@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult } from "../types";
 
@@ -14,11 +13,11 @@ const analysisSchema = {
     },
     summary: {
       type: Type.STRING,
-      description: "Um resumo executivo analítico focado em oportunidades macro.",
+      description: "Um resumo executivo analítico de alto nível, abordando tendências do setor e diagnósticos de mercado.",
     },
     averageEmployees: {
       type: Type.NUMBER,
-      description: "A média aritmética simples do número de colaboradores dos participantes.",
+      description: "A média de colaboradores do grupo de participantes.",
     },
     participants: {
       type: Type.ARRAY,
@@ -99,18 +98,24 @@ const analysisSchema = {
 
 export const analyzeNetworkingData = async (rawData: string): Promise<AnalysisResult> => {
   const prompt = `
-    Você é um Mestre em Matchmaking de Negócios e Estrategista de Networking.
+    ATUE COMO UM ESTRATEGISTA DE M&A E CONSULTOR SÊNIOR DE NETWORKING CORPORATIVO.
     
-    **ALGORITMO DE CONEXÃO AVANÇADO:**
-    1. **Complementaridade de Cadeia (50%):** Analise se uma empresa fornece o que a outra precisa (ex: Software de Logística -> Transportadora).
-    2. **Poder de Decisão e Escala (25%):** Use o número de colaboradores como proxy para maturidade e volume de compra/venda.
-    3. **Sinergia Setorial Latente (15%):** Conexões entre setores que compartilham o mesmo ICP (cliente ideal).
-    4. **Inovação Cruzada (10%):** Conectar empresas disruptivas com tradicionais para troca de know-how.
+    **MISSÃO:**
+    Analise a lista de participantes e gere um relatório de sinergia de alto impacto.
+    
+    **ALGORITMO DE CONEXÃO "VENTURE GRADE":**
+    1. **Sinergia Operacional e Cadeia de Valor:** Como o produto/serviço de A atende uma dor crítica ou GAP tecnológico de B.
+    2. **Maturidade Corporativa:** Utilize o porte (colaboradores) para alinhar empresas em estágios similares ou complementares.
+    3. **Tendências de Mercado:** Considere como os setores (ex: Marketing Digital + Varejo) estão convergindo no cenário atual.
+    4. **Metas Estratégicas Implícitas:** Deduza metas (ex: expansão, eficiência, tecnologia) baseado no perfil e setor.
 
-    **TAREFA:**
-    - Calcule a média de colaboradores (averageEmployees).
-    - Gere conexões detalhadas para CADA participante.
-    - O Score de Match deve ser rigoroso: >90 apenas para parcerias 'perfeitas'.
+    **REQUISITOS DE JUSTIFICATIVA:**
+    As razões devem ser granuladas e assertivas. Use terminologia de negócios (ex: "Gargalo de Supply Chain", "Aquisição de Clientes de Baixo CAC", "Pivotagem Tecnológica").
+    
+    **IMPORTANTE:**
+    - Para CADA participante, gere recomendações de conexão com TODOS os outros participantes que tenham o mínimo de sinergia (mesmo que o score seja baixo, ex: 10%).
+    - Calcule a média real de colaboradores (averageEmployees).
+    - O 'overallScore' deve refletir o potencial de geração de caixa do grupo.
 
     DADOS:
     ${rawData}
@@ -120,16 +125,18 @@ export const analyzeNetworkingData = async (rawData: string): Promise<AnalysisRe
 
 export const analyzeHostPotential = async (hostsData: string, participantsData: string): Promise<AnalysisResult> => {
     const prompt = `
-      Estrategista de ROI de Eventos focado no HOST.
+      ESTRATEGISTA DE INVESTIMENTOS E ROI PARA EVENTOS.
   
-      **ALGORITMO DO HOST:**
-      1. **ICP Match (60%):** Nível de aderência do convidado ao produto/serviço do Host.
-      2. **Cross-Selling / Upselling (25%):** Potencial de parceria para expandir mercado.
-      3. **Qualificação de Leads (15%):** Baseado em porte (colaboradores) e relevância no setor.
+      **FOCO NO HOST:**
+      O Host quer maximizar o valor de sua agenda.
+      1. **Qualificação de Lead:** Identifique convidados que são "Ideal Customer Profiles" para o negócio do Host.
+      2. **Parceria Estratégica:** Quem pode ser um canal de vendas ou fornecedor crítico.
+      3. **Experiência de Negócio:** Justifique com base em teses de crescimento acelerado.
   
-      Calcule a média de colaboradores de todos os convidados.
+      Gere uma análise onde cada convidado tenha um score de "aderência ao host" granulado.
+      Calcule a média de colaboradores.
   
-      HOST: ${hostsData}
+      HOST(S): ${hostsData}
       CONVIDADOS: ${participantsData}
     `;
     return callGemini(prompt);
@@ -143,7 +150,7 @@ const callGemini = async (prompt: string): Promise<AnalysisResult> => {
           config: {
             responseMimeType: "application/json",
             responseSchema: analysisSchema,
-            temperature: 0.1,
+            temperature: 0.2,
             thinkingConfig: { thinkingBudget: 4096 }
           },
         });
@@ -151,7 +158,7 @@ const callGemini = async (prompt: string): Promise<AnalysisResult> => {
         if (!jsonText) throw new Error("Sem resposta da IA");
         return JSON.parse(jsonText) as AnalysisResult;
       } catch (error) {
-        console.error("Erro na análise:", error);
-        throw new Error("Falha ao analisar os dados de networking.");
+        console.error("Erro na análise Gemini:", error);
+        throw new Error("Erro ao processar inteligência de negócios. Verifique os dados inseridos.");
       }
 };
