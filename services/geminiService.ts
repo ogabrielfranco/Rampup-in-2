@@ -12,11 +12,11 @@ const analysisSchema = {
   properties: {
     overallScore: {
       type: Type.NUMBER,
-      description: "O 'Business Index' geral (0-100) para o grupo, baseado no potencial de sinergia estratégica e densidade de decisores.",
+      description: "O 'Business Index' geral (0-100) calculado pela média ponderada das sinergias.",
     },
     summary: {
       type: Type.STRING,
-      description: "Um resumo executivo detalhado sobre o potencial de networking, citando tendências setoriais e sinergias de metas (máx 3 frases).",
+      description: "Um resumo executivo detalhado sobre o potencial de networking (máx 3 frases).",
     },
     participants: {
       type: Type.ARRAY,
@@ -27,7 +27,7 @@ const analysisSchema = {
           name: { type: Type.STRING },
           company: { type: Type.STRING },
           segment: { type: Type.STRING },
-          employeeCount: { type: Type.STRING, description: "Número de colaboradores da empresa, se disponível." },
+          employeeCount: { type: Type.STRING },
           eventName: { type: Type.STRING },
           isHost: { type: Type.BOOLEAN }
         },
@@ -40,17 +40,17 @@ const analysisSchema = {
         type: Type.OBJECT,
         properties: {
           participantId: { type: Type.STRING },
-          score: { type: Type.NUMBER, description: "Índice de Negócio Individual (0-100). Baseado no potencial de prover ou receber valor estratégico." },
-          potentialConnections: { type: Type.NUMBER, description: "Número de conexões de alta probabilidade encontradas." },
-          scoreReasoning: { type: Type.STRING, description: "Explicação granular do score baseada em metas e tendências setoriais." },
+          score: { type: Type.NUMBER, description: "Score individual calculado: (Sinergia*0.4 + Alinhamento*0.3 + Escala*0.2 + Diversidade*0.1)" },
+          potentialConnections: { type: Type.NUMBER },
+          scoreReasoning: { type: Type.STRING },
           recommendedConnections: {
             type: Type.ARRAY,
             items: {
               type: Type.OBJECT,
               properties: {
                 partnerId: { type: Type.STRING },
-                score: { type: Type.NUMBER, description: "Força do Match 0-100" },
-                reason: { type: Type.STRING, description: "Motivo granular (ex: 'Sinergia entre tecnologia de RH e empresas em expansão de frota')." }
+                score: { type: Type.NUMBER },
+                reason: { type: Type.STRING }
               },
               required: ["partnerId", "score", "reason"]
             }
@@ -97,18 +97,19 @@ const analysisSchema = {
 
 export const analyzeNetworkingData = async (rawData: string): Promise<AnalysisResult> => {
   const prompt = `
-    Você é um Estrategista de Conexões de Negócios especializado em ecossistemas de alta performance.
+    Você é um Estrategista de Conexões de Negócios de Alta Performance.
     
-    **Tarefa:** Calcular o "Rampup IN" (Índice de Negócio) e mapear conexões estratégicas.
-    
-    **Instruções de Análise Profunda:**
-    1. **Metas de Negócio:** Se os dados sugerirem metas (ex: 'expansão', 'tech', 'vendas'), priorize matches que resolvam essas necessidades.
-    2. **Tendências do Setor (2024-2025):** Considere tendências como digitalização de cadeias de suprimento, ESG, automação com IA e BPO.
-    3. **Tamanho da Empresa:** Use a quantidade de colaboradores como um fator de relevância para matches (ex: empresas grandes podem precisar de BPO, empresas pequenas de consultoria de crescimento).
-    4. **Justificativa Granular:** Não use "Setores parecidos". Use termos como "Otimização de Supply Chain", "Verticalização de Vendas", "Cross-selling em serviços corporativos".
-    5. **Densidade de Decisores:** Se houver muitos decisores de um setor específico (ex: Logística), destaque como isso favorece parcerias de infraestrutura.
+    **MISSÃO:** Calcular o "Rampup IN" (Índice de Negócio) usando o seguinte ALGORITMO PONDERADO:
+    1. **Sinergia Setorial (40%):** Potencial de transação direta ou complementaridade entre setores (ex: TI -> Varejo).
+    2. **Alinhamento Estratégico (30%):** Quão bem o perfil do participante atende aos objetivos descritos no contexto do evento.
+    3. **Escala e Maturidade (20%):** Impacto baseado no número de colaboradores. Empresas maiores ganham peso em 'Capacidade de Compra', menores em 'Agilidade e Inovação'.
+    4. **Diversidade de Rede (10%):** Capacidade do participante de trazer novas perspectivas para o grupo.
 
-    Dados Brutos:
+    **REQUISITO DE ANÁLISE:**
+    - Identifique padrões ocultos (ex: muitos empresários de logística em um evento de e-commerce aumenta o IN geral).
+    - As justificativas de match devem citar "Otimização de Cadeia", "Sinergia Tecnológica" ou "Escalabilidade Operacional".
+
+    Dados do Evento e Participantes:
     ${rawData}
   `;
   return callGemini(prompt);
@@ -116,19 +117,17 @@ export const analyzeNetworkingData = async (rawData: string): Promise<AnalysisRe
 
 export const analyzeHostPotential = async (hostsData: string, participantsData: string): Promise<AnalysisResult> => {
     const prompt = `
-      Você é um Estrategista de Matchmaking com foco no HOST.
+      Você é um Especialista em Matchmaking focado em ROI para o HOST.
   
-      **Objetivo:** Analisar quão estratégicos os GUESTS são para os objetivos do HOST.
+      **ALGORITMO DO HOST:**
+      1. **ICP Match (50%):** O convidado é um cliente ideal para o Host? (Considere tamanho da empresa e setor).
+      2. **Parceria Estratégica (30%):** O convidado oferece serviços que o Host não tem, permitindo cross-selling?
+      3. **Autoridade e Escala (20%):** O convidado é um decisor de uma empresa de grande porte (>100 colab)?
   
-      **Critérios:**
-      - **ICP (Ideal Customer Profile):** Identifique convidados que são potenciais clientes do Host. Considere o tamanho da empresa (colaboradores) se disponível.
-      - **Parcerias Estratégicas:** Identifique convidados que complementam o serviço do Host.
-      - **Networking de Influência:** Identifique decisores de setores em alta que o Host deve conhecer.
-      
-      Justifique cada conexão com motivos de mercado granulares.
+      Calcule o IN baseado exclusivamente no valor gerado PARA O ANFITRIÃO.
   
-      DADOS DO HOST: ${hostsData}
-      DADOS DOS CONVIDADOS: ${participantsData}
+      HOST: ${hostsData}
+      GUESTS: ${participantsData}
     `;
     return callGemini(prompt);
 };
@@ -141,7 +140,7 @@ const callGemini = async (prompt: string): Promise<AnalysisResult> => {
           config: {
             responseMimeType: "application/json",
             responseSchema: analysisSchema,
-            temperature: 0.2,
+            temperature: 0.1, // Lower temperature for more consistent calculations
             thinkingConfig: { thinkingBudget: 4096 }
           },
         });

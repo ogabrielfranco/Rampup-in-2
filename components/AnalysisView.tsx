@@ -6,7 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, 
   CartesianGrid, LabelList
 } from 'recharts';
-import { Users, TrendingUp, Link, ArrowLeft, ArrowRight, FileSpreadsheet, List, Layers, Search, Building2, X, Briefcase, LayoutTemplate, Crown, Download, ChevronRight, FileText, Presentation, ChevronDown, ChevronUp, UserPlus, Info } from 'lucide-react';
+import { Users, TrendingUp, Link, ArrowLeft, ArrowRight, FileSpreadsheet, List, Layers, Search, Building2, X, Briefcase, LayoutTemplate, Crown, Download, ChevronRight, FileText, Presentation, ChevronDown, ChevronUp, UserPlus, Info, Calculator, Target, Zap, Globe } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
@@ -536,6 +536,53 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
                <div className="col-span-1 sm:col-span-1"><MetricCard title="Matches 80+" value={allMatches.filter(m => m.score >= 80).length} icon={Link} isDarkMode={isDarkMode} accentColor="bg-purple-500" /></div>
                <div className="col-span-1 sm:col-span-1"><MetricCard title="Média Colab." value={employeeStats.avgEmployees} icon={UserPlus} isDarkMode={isDarkMode} accentColor="bg-amber-500" /></div>
                <div className="col-span-2 lg:col-span-1"><MetricCard title="Layout Ideal" value={formatLayoutName(currentLayout)} icon={LayoutTemplate} isDarkMode={isDarkMode} accentColor="bg-orange-500" /></div>
+             </div>
+
+             {/* Methodology Section */}
+             <div className={`p-6 md:p-8 rounded-[2.5rem] border-2 shadow-2xl relative overflow-hidden ${isDarkMode ? 'bg-chumbo-950 border-emerald-900/30' : 'bg-white border-emerald-100 shadow-emerald-900/5'}`}>
+                <div className="absolute top-0 right-0 p-10 opacity-5">
+                   <Calculator className="w-64 h-64 rotate-12" />
+                </div>
+                <div className="relative z-10">
+                   <div className="flex items-center gap-3 mb-6">
+                      <div className="p-2 bg-emerald-500 rounded-xl">
+                        <Zap className="w-5 h-5 text-white" />
+                      </div>
+                      <h3 className="text-xl font-black uppercase tracking-tight">Metodologia do Índice IN</h3>
+                   </div>
+                   
+                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-emerald-500 font-black text-xs uppercase">
+                           <Target className="w-4 h-4" /> 40% Sinergia
+                        </div>
+                        <p className="text-xs opacity-70 leading-relaxed">Potencial de transação direta ou complementaridade entre setores adjacentes.</p>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-blue-500 font-black text-xs uppercase">
+                           <Info className="w-4 h-4" /> 30% Alinhamento
+                        </div>
+                        <p className="text-xs opacity-70 leading-relaxed">Concordância entre o perfil da empresa e os objetivos estratégicos do evento.</p>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-amber-500 font-black text-xs uppercase">
+                           <Building2 className="w-4 h-4" /> 20% Escala
+                        </div>
+                        <p className="text-xs opacity-70 leading-relaxed">Maturidade operacional baseada no número de colaboradores e market share.</p>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-purple-500 font-black text-xs uppercase">
+                           <Globe className="w-4 h-4" /> 10% Diversidade
+                        </div>
+                        <p className="text-xs opacity-70 leading-relaxed">Abertura para novos mercados e capacidade de inovação cross-setorial.</p>
+                      </div>
+                   </div>
+                   
+                   <div className={`mt-8 pt-6 border-t font-mono text-[10px] md:text-xs flex flex-wrap items-center gap-x-4 gap-y-2 ${isDarkMode ? 'border-emerald-900/30 text-emerald-400' : 'border-emerald-50 text-emerald-700'}`}>
+                      <span className="font-black uppercase bg-emerald-500/10 px-2 py-1 rounded">Fórmula:</span>
+                      <span>IN = (Sinergia * 0.4) + (Alinhamento * 0.3) + (Escala * 0.2) + (Diversidade * 0.1)</span>
+                   </div>
+                </div>
              </div>
 
              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
