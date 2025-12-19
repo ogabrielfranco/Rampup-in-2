@@ -13,11 +13,11 @@ const analysisSchema = {
     },
     summary: {
       type: Type.STRING,
-      description: "Um resumo executivo analítico de alto nível, abordando tendências do setor e diagnósticos de mercado.",
+      description: "Um resumo executivo analítico de alto nível, abordando tendências do setor, diagnósticos de mercado e teses de investimento.",
     },
     averageEmployees: {
       type: Type.NUMBER,
-      description: "A média de colaboradores do grupo de participantes.",
+      description: "A média de colaboradores do grupo de participantes mapeados.",
     },
     participants: {
       type: Type.ARRAY,
@@ -98,24 +98,22 @@ const analysisSchema = {
 
 export const analyzeNetworkingData = async (rawData: string): Promise<AnalysisResult> => {
   const prompt = `
-    ATUE COMO UM ESTRATEGISTA DE M&A E CONSULTOR SÊNIOR DE NETWORKING CORPORATIVO.
+    ATUE COMO UM ESTRATEGISTA DE M&A E CONSULTOR SÊNIOR DE CONEXÕES EMPRESARIAIS.
     
     **MISSÃO:**
-    Analise a lista de participantes e gere um relatório de sinergia de alto impacto.
+    Gerar um mapeamento EXAUSTIVO de sinergias para TODOS os participantes.
     
-    **ALGORITMO DE CONEXÃO "VENTURE GRADE":**
-    1. **Sinergia Operacional e Cadeia de Valor:** Como o produto/serviço de A atende uma dor crítica ou GAP tecnológico de B.
-    2. **Maturidade Corporativa:** Utilize o porte (colaboradores) para alinhar empresas em estágios similares ou complementares.
-    3. **Tendências de Mercado:** Considere como os setores (ex: Marketing Digital + Varejo) estão convergindo no cenário atual.
-    4. **Metas Estratégicas Implícitas:** Deduza metas (ex: expansão, eficiência, tecnologia) baseado no perfil e setor.
+    **CRITÉRIOS DE MATCHMAKING (EXECUTIVE GRADE):**
+    1. **Sinergia Operacional:** Cruzamento de GAPs tecnológicos de uma empresa com soluções de outra.
+    2. **Maturidade e Porte:** Alinhamento baseado em volume de colaboradores e capacidade de entrega/compra.
+    3. **Tendências do Setor:** Como a convergência setorial cria valor imediato.
+    4. **Metas de Negócios:** Considere metas de escala e eficiência.
 
-    **REQUISITOS DE JUSTIFICATIVA:**
-    As razões devem ser granuladas e assertivas. Use terminologia de negócios (ex: "Gargalo de Supply Chain", "Aquisição de Clientes de Baixo CAC", "Pivotagem Tecnológica").
-    
-    **IMPORTANTE:**
-    - Para CADA participante, gere recomendações de conexão com TODOS os outros participantes que tenham o mínimo de sinergia (mesmo que o score seja baixo, ex: 10%).
-    - Calcule a média real de colaboradores (averageEmployees).
-    - O 'overallScore' deve refletir o potencial de geração de caixa do grupo.
+    **REQUISITOS MANDATÓRIOS:**
+    - LISTA EXAUSTIVA: Para cada participante, você DEVE listar conexões com praticamente todos os outros participantes da lista, atribuindo um score (mesmo que baixo, ex: 5% ou 10%) e uma justificativa para cada um. 
+    - Ninguém deve ser deixado de fora das recomendações de um participante.
+    - JUSTIFICATIVAS GRANULARES: Use termos como "Otimização de Unit Economics", "Expansão de Market Share", "Sinergia de GTM".
+    - O HOST: Trate o Host como uma peça estratégica no tabuleiro.
 
     DADOS:
     ${rawData}
@@ -127,14 +125,11 @@ export const analyzeHostPotential = async (hostsData: string, participantsData: 
     const prompt = `
       ESTRATEGISTA DE INVESTIMENTOS E ROI PARA EVENTOS.
   
-      **FOCO NO HOST:**
-      O Host quer maximizar o valor de sua agenda.
-      1. **Qualificação de Lead:** Identifique convidados que são "Ideal Customer Profiles" para o negócio do Host.
-      2. **Parceria Estratégica:** Quem pode ser um canal de vendas ou fornecedor crítico.
-      3. **Experiência de Negócio:** Justifique com base em teses de crescimento acelerado.
-  
-      Gere uma análise onde cada convidado tenha um score de "aderência ao host" granulado.
-      Calcule a média de colaboradores.
+      **ANÁLISE DE IMPACTO DO HOST E CONVIDADOS:**
+      Mapeie exaustivamente como cada convidado se conecta com o(s) Host(s) e entre si.
+      Para cada pessoa, liste conexões com todos os outros, justificando até as sinergias mais improváveis ou de longo prazo.
+      
+      Gere uma análise completa. Calcule a média de colaboradores.
   
       HOST(S): ${hostsData}
       CONVIDADOS: ${participantsData}
@@ -150,7 +145,7 @@ const callGemini = async (prompt: string): Promise<AnalysisResult> => {
           config: {
             responseMimeType: "application/json",
             responseSchema: analysisSchema,
-            temperature: 0.2,
+            temperature: 0.1,
             thinkingConfig: { thinkingBudget: 4096 }
           },
         });
@@ -159,6 +154,6 @@ const callGemini = async (prompt: string): Promise<AnalysisResult> => {
         return JSON.parse(jsonText) as AnalysisResult;
       } catch (error) {
         console.error("Erro na análise Gemini:", error);
-        throw new Error("Erro ao processar inteligência de negócios. Verifique os dados inseridos.");
+        throw new Error("Erro ao processar inteligência estratégica. Revise os dados.");
       }
 };

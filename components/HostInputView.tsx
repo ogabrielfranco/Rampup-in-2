@@ -1,7 +1,5 @@
-
 import React, { useState } from 'react';
-import { Upload, Play, UserCircle, Users, RefreshCw, FileText } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import { UserCircle, RefreshCw } from 'lucide-react';
 
 interface HostInputViewProps {
   onAnalyze: (hostsData: string, participantsData: string) => void;
@@ -42,8 +40,7 @@ const HostInputView: React.FC<HostInputViewProps> = ({ onAnalyze, isLoading, isD
   const [participantsText, setParticipantsText] = useState('');
 
   const handleDemo = () => {
-    // Dados específicos solicitados
-    const hostData = "Host 1: Otacilio Valente, Colmeia, Construção Civil, 500 colaboradores\nHost 2: Nayana Branco, Somapay, Folha de Pagamento para Empresas, Financeiro, 250 colaboradores";
+    const hostData = "Host 1: Otacilio Valente, Colmeia, Construção Civil, 500 colaboradores\nHost 2: Nayana Branco, Somapay, Financeiro, 250 colaboradores";
     setHostsText(hostData);
     setParticipantsText(generateRandomGuestData(20));
   };
@@ -68,7 +65,7 @@ const HostInputView: React.FC<HostInputViewProps> = ({ onAnalyze, isLoading, isD
         <div className="p-8 space-y-8">
           <div className="flex justify-end">
             <button onClick={handleDemo} className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-all">
-              <RefreshCw className="w-3 h-3" /> Simular Otacílio & Nayana
+              <RefreshCw className="w-3 h-3" /> Simular cenário
             </button>
           </div>
 
@@ -84,7 +81,7 @@ const HostInputView: React.FC<HostInputViewProps> = ({ onAnalyze, isLoading, isD
           </div>
 
           <button onClick={handleAnalyzeClick} disabled={!hostsText || !participantsText || isLoading} className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl shadow-lg shadow-blue-200 hover:bg-blue-700 disabled:opacity-50 transition-all uppercase tracking-widest text-sm">
-            Gerar Índice de Negócios para o Host
+            Gerar Índice de Negócios
           </button>
         </div>
       </div>
