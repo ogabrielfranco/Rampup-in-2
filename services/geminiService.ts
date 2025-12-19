@@ -103,17 +103,16 @@ export const analyzeNetworkingData = async (rawData: string): Promise<AnalysisRe
     **MISSÃO:**
     Gerar um mapeamento EXAUSTIVO de sinergias para TODOS os participantes.
     
-    **CRITÉRIOS DE MATCHMAKING (EXECUTIVE GRADE):**
-    1. **Sinergia Operacional:** Cruzamento de GAPs tecnológicos de uma empresa com soluções de outra.
-    2. **Maturidade e Porte:** Alinhamento baseado em volume de colaboradores e capacidade de entrega/compra.
-    3. **Tendências do Setor:** Como a convergência setorial cria valor imediato.
-    4. **Metas de Negócios:** Considere metas de escala e eficiência.
+    **CRITÉRIOS DE MATCHMAKING AVANÇADOS:**
+    1. **Sinergia Operacional e de Cadeia:** Cruzamento de GAPs de uma empresa com soluções de outra.
+    2. **Maturidade e Porte:** Alinhamento baseado em volume de colaboradores.
+    3. **TENDÊNCIAS DE SETOR:** Considere como a convergência setorial (ex: Fintech no Varejo, IA na Construção) cria valor.
+    4. **METAS DE NEGÓCIO:** Analise potenciais metas de escala, eficiência ou saída (Exit) baseado no perfil da empresa.
 
     **REQUISITOS MANDATÓRIOS:**
-    - LISTA EXAUSTIVA: Para cada participante, você DEVE listar conexões com praticamente todos os outros participantes da lista, atribuindo um score (mesmo que baixo, ex: 5% ou 10%) e uma justificativa para cada um. 
-    - Ninguém deve ser deixado de fora das recomendações de um participante.
-    - JUSTIFICATIVAS GRANULARES: Use termos como "Otimização de Unit Economics", "Expansão de Market Share", "Sinergia de GTM".
-    - O HOST: Trate o Host como uma peça estratégica no tabuleiro.
+    - LISTA EXAUSTIVA: Para cada participante, mapeie conexões com praticamente todos os outros participantes.
+    - JUSTIFICATIVAS ULTRA-GRANULARES: Não use justificativas genéricas. Use termos como "Integração Vertical de Supply Chain", "Redução de CAC via Cross-Sell Setorial", "M&A Opportunity", "Sinergia de GTM em novos territórios".
+    - O HOST: Trate o Host como uma peça estratégica central.
 
     DADOS:
     ${rawData}
@@ -127,9 +126,8 @@ export const analyzeHostPotential = async (hostsData: string, participantsData: 
   
       **ANÁLISE DE IMPACTO DO HOST E CONVIDADOS:**
       Mapeie exaustivamente como cada convidado se conecta com o(s) Host(s) e entre si.
-      Para cada pessoa, liste conexões com todos os outros, justificando até as sinergias mais improváveis ou de longo prazo.
-      
-      Gere uma análise completa. Calcule a média de colaboradores.
+      Considere tendências macro do setor e metas de escala para justificar os matches.
+      Gere justificativas granulares focadas em geração de receita imediata e alianças de longo prazo.
   
       HOST(S): ${hostsData}
       CONVIDADOS: ${participantsData}
@@ -154,6 +152,6 @@ const callGemini = async (prompt: string): Promise<AnalysisResult> => {
         return JSON.parse(jsonText) as AnalysisResult;
       } catch (error) {
         console.error("Erro na análise Gemini:", error);
-        throw new Error("Erro ao processar inteligência estratégica. Revise os dados.");
+        throw new Error("Erro ao processar inteligência estratégica.");
       }
 };

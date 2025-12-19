@@ -7,7 +7,7 @@ import {
 import { 
   ArrowLeft, ArrowRight, FileSpreadsheet, Search, 
   X, Crown, ChevronRight, FileText, Presentation, 
-  Zap, FileDown, Target, Briefcase, TrendingUp, AlertCircle, PieChart as PieIcon
+  Zap, FileDown, Target, Briefcase, TrendingUp, AlertCircle, Users
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -30,7 +30,6 @@ const ParticipantRow: React.FC<{
   isDarkMode: boolean;
 }> = ({ item, isExpanded, onToggle, participantMap, inboundConnections, isDarkMode }) => {
   const hasInbound = inboundConnections.length > 0;
-  // Destaque em vermelho se a pessoa tiver conexões quase nulas (raro)
   const isIsolated = inboundConnections.length < 2 && item.score.score < 20; 
 
   return (
@@ -77,8 +76,8 @@ const ParticipantRow: React.FC<{
           {!hasInbound ? (
             <div className="text-center py-8">
               <AlertCircle className="w-10 h-10 text-red-400 mx-auto mb-3" />
-              <p className="text-sm font-bold text-red-500 uppercase tracking-widest">Baixa Conectividade</p>
-              <p className="text-xs text-gray-500 mt-1">Nenhum participante foi identificado como match direto para este perfil.</p>
+              <p className="text-sm font-bold text-red-500 uppercase tracking-widest">Nenhuma conexão de entrada</p>
+              <p className="text-xs text-gray-500 mt-1">Este participante não possui sinergia imediata com o grupo atual.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -135,18 +134,13 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
     return map;
   }, [data.participants]);
 
-  // Mapeamento de quem se conecta AO participante selecionado
   const inboundConnectionsMap = useMemo(() => {
     const map = new Map<string, { partnerId: string; score: number; reason: string }[]>();
     data.individualScores.forEach(score => {
       score.recommendedConnections?.forEach(conn => {
         const targetId = conn.partnerId;
         const list = map.get(targetId) || [];
-        list.push({
-          partnerId: score.participantId,
-          score: conn.score,
-          reason: conn.reason
-        });
+        list.push({ partnerId: score.participantId, score: conn.score, reason: conn.reason });
         map.set(targetId, list);
       });
     });
@@ -185,7 +179,18 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
   }, [data.individualScores, participantMap]);
 
   const sortedSegments = useMemo(() => [...data.segmentDistribution].sort((a,b) => b.value - a.value), [data.segmentDistribution]);
-  const sortedIndividuals = useMemo(() => fullList.slice(0, 10).map(item => ({ name: item.p.name, score: item.score.score })), [fullList]);
+  
+  const topCompaniesByEmployees = useMemo(() => {
+    return data.participants
+      .map(p => ({
+        name: p.company,
+        employees: parseInt(p.employeeCount || '0', 10) || 0,
+        owner: p.name
+      }))
+      .filter(p => p.employees > 0)
+      .sort((a, b) => b.employees - a.employees)
+      .slice(0, 10);
+  }, [data.participants]);
 
   const captureElement = async (ref: React.RefObject<HTMLDivElement>) => {
     if (!ref.current) return null;
@@ -205,211 +210,130 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
       const chartsImg = await captureElement(chartRef);
       const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [297, 167] });
       const primary: [number, number, number] = [5, 150, 105];
-      const secondary: [number, number, number] = [31, 41, 55];
       const eventName = data.participants[0]?.eventName || "SUMMIT DE NEGÓCIOS";
 
       doc.setFillColor(primary[0], primary[1], primary[2]);
       doc.rect(0, 0, 297, 167, 'F');
       doc.setTextColor(255, 255, 255);
-      doc.setFont("Montserrat", "bold");
       doc.setFontSize(54);
       doc.text("RAMPUP IN", 148, 70, { align: 'center' });
       doc.setFontSize(22);
-      doc.setFont("Montserrat", "normal");
       doc.text("INTELIGÊNCIA ESTRATÉGICA DE NETWORKING", 148, 85, { align: 'center' });
-      doc.setFontSize(14);
-      doc.text(eventName.toUpperCase(), 148, 120, { align: 'center' });
-      doc.text(new Date().toLocaleDateString('pt-BR'), 148, 130, { align: 'center' });
+      
+      doc.addPage();
+      doc.setTextColor(0);
+      doc.text("Resumo de Performance", 20, 25);
+      doc.setFontSize(12);
+      doc.text(`Business Index: ${data.overallScore}%`, 20, 35);
+      doc.text(`Média de Colaboradores: ${data.averageEmployees}`, 20, 42);
+      if (chartsImg) doc.addImage(chartsImg, 'PNG', 20, 50, 257, 100);
 
       doc.addPage();
-      doc.setTextColor(primary[0], primary[1], primary[2]);
-      doc.setFontSize(32);
-      doc.setFont("Montserrat", "bold");
-      doc.text("Sumário Executivo", 20, 30);
-      doc.setTextColor(secondary[0], secondary[1], secondary[2]);
-      doc.setFontSize(16);
-      doc.setFont("Montserrat", "normal");
-      const contents = ["1. Diagnóstico de Performance", "2. TOP 10 Sinergias", "3. Mapeamento Individual", "4. Layout Estratégico"];
-      contents.forEach((item, i) => doc.text(item, 25, 55 + (i * 12)));
-
-      doc.addPage();
-      doc.setTextColor(primary[0], primary[1], primary[2]);
-      doc.setFontSize(26);
-      doc.text("1. Diagnóstico de Performance", 20, 25);
-      doc.setTextColor(secondary[0], secondary[1], secondary[2]);
-      doc.setFontSize(18);
-      doc.text(`Business Index Médio: ${data.overallScore}%`, 20, 40);
-      doc.setFontSize(11);
-      const splitSummary = doc.splitTextToSize(data.summary, 250);
-      doc.text(splitSummary, 20, 55);
-      if (chartsImg) doc.addImage(chartsImg, 'PNG', 20, 95, 257, 60);
-
-      doc.addPage();
-      doc.text("2. TOP 10 Sinergias Identificadas", 20, 25);
-      autoTable(doc, {
-        startY: 35,
-        head: [['Sócio A', 'Sócio B', 'Score Match', 'Tese de Valor']],
-        body: allMatches.slice(0, 10).map(m => [m.p1.name, m.p2.name, `${m.score}%`, m.reason]),
-        styles: { font: 'Montserrat', fontSize: 9 },
-        headStyles: { fillColor: primary }
-      });
-
-      doc.addPage();
-      doc.text("3. Mapeamento Geral", 20, 25);
+      doc.text("Mapeamento Geral", 20, 25);
       autoTable(doc, {
         startY: 35,
         head: [['Executivo', 'Corporação', 'Setor', 'Index IN']],
         body: fullList.map(item => [item.p.name, item.p.company, item.p.segment, `${item.score.score}%`]),
-        styles: { font: 'Montserrat', fontSize: 8 },
-        headStyles: { fillColor: primary }
       });
 
       if (mapImg) {
         doc.addPage();
-        doc.text("4. Layout Estratégico da Sala", 20, 25);
+        doc.text("Mapa Estratégico da Sala", 20, 25);
         doc.addImage(mapImg, 'PNG', 20, 40, 257, 110);
       }
-      doc.save(`Rampup_IN_Relatorio_Premium_${new Date().getTime()}.pdf`);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleExportPPTX = async () => {
-    setIsExporting(true);
-    try {
-      const mapImg = await captureElement(mapContainerRef);
-      const chartsImg = await captureElement(chartRef);
-      const pptx = new pptxgen();
-      pptx.layout = 'LAYOUT_16x9';
-      const eventName = data.participants[0]?.eventName || "SUMMIT IN";
-
-      const slide1 = pptx.addSlide();
-      slide1.background = { color: '059669' };
-      slide1.addText("RAMPUP IN", { x: 0, y: 1.5, w: '100%', align: 'center', fontSize: 54, bold: true, color: 'FFFFFF', fontFace: 'Montserrat' });
-      slide1.addText("INTELIGÊNCIA DE CONEXÕES", { x: 0, y: 2.3, w: '100%', align: 'center', fontSize: 22, color: 'FFFFFF', fontFace: 'Montserrat' });
-      slide1.addText(eventName.toUpperCase(), { x: 0, y: 3.8, w: '100%', align: 'center', fontSize: 16, color: 'FFFFFF' });
-
-      const slide2 = pptx.addSlide();
-      slide2.addText("Diagnóstico Executivo", { x: 0.5, y: 0.5, fontSize: 32, bold: true, color: '059669', fontFace: 'Montserrat' });
-      slide2.addText(data.summary, { x: 0.5, y: 1.8, w: 9, h: 2, fontSize: 14, color: '334155', fontFace: 'Montserrat' });
-      if (chartsImg) slide2.addImage({ data: chartsImg, x: 0.5, y: 4.0, w: 9, h: 1.5 });
-
-      if (mapImg) {
-        const slide3 = pptx.addSlide();
-        slide3.addText("Layout Estratégico", { x: 0.5, y: 0.5, fontSize: 28, bold: true, color: '059669', fontFace: 'Montserrat' });
-        slide3.addImage({ data: mapImg, x: 0.5, y: 1.2, w: 9, h: 4.3 });
-      }
-
-      pptx.writeFile({ fileName: `Apresentacao_Rampup_IN.pptx` });
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleExportExcel = () => {
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(fullList.map(item => ({
-      Nome: item.p.name,
-      Empresa: item.p.company,
-      Setor: item.p.segment,
-      "Index IN": `${item.score.score}%`
-    })));
-    XLSX.utils.book_append_sheet(wb, ws, "Mapeamento");
-    XLSX.writeFile(wb, "Rampup_IN.xlsx");
+      doc.save(`Rampup_IN_${new Date().getTime()}.pdf`);
+    } catch (err) { console.error(err); } finally { setIsExporting(false); }
   };
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 md:space-y-8 animate-fade-in mb-20 px-4 md:px-0">
+      {/* Header */}
       <div className={`flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b pb-8 ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`}>
-        <div className="animate-slide-up">
+        <div>
            <button onClick={onReset} className="text-[10px] font-black uppercase text-gray-400 hover:text-emerald-600 mb-2 flex items-center gap-2 transition-all group">
-             <ArrowLeft className="w-3 h-3 group-hover:-translate-x-1 transition-transform" /> Reiniciar Mapeamento
+             <ArrowLeft className="w-3 h-3 group-hover:-translate-x-1 transition-transform" /> Voltar
            </button>
            <h2 className={`text-2xl md:text-4xl font-black tracking-tighter ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
              Dashboard <span className="text-emerald-600">IN</span>
            </h2>
         </div>
-
-        <div className="flex flex-wrap gap-2 w-full md:w-auto">
-           <button onClick={handleExportExcel} className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm ${isDarkMode ? 'bg-gray-800 border border-gray-700 text-verde-neon hover:bg-gray-700' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}>
-             <FileSpreadsheet className="w-3.5 h-3.5" /> Planilha
-           </button>
-           <button onClick={handleExportPDF} disabled={isExporting} className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm disabled:opacity-50 ${isDarkMode ? 'bg-gray-800 border border-gray-700 text-blue-400 hover:bg-gray-700' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>
-             <FileDown className="w-3.5 h-3.5" /> PDF (16:9)
-           </button>
-           <button onClick={handleExportPPTX} disabled={isExporting} className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm disabled:opacity-50 ${isDarkMode ? 'bg-gray-800 border border-gray-700 text-orange-400 hover:bg-gray-700' : 'bg-orange-50 text-orange-700 hover:bg-orange-100'}`}>
-             <Presentation className="w-3.5 h-3.5" /> Slides
+        <div className="flex flex-wrap gap-2">
+           {/* Fix: Removed duplicate onClick attribute to resolve JSX element error */}
+           <button className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isDarkMode ? 'bg-gray-800 text-verde-neon' : 'bg-emerald-50 text-emerald-700'}`} onClick={handleExportPDF}>
+             <FileDown className="w-3.5 h-3.5 inline mr-2" /> Relatório Executivo
            </button>
         </div>
       </div>
 
-      <div className="sticky top-[64px] z-50 overflow-x-auto no-scrollbar -mx-4 px-4 py-2 md:mx-0 md:px-0">
-        <div className={`flex p-1 rounded-2xl w-fit md:w-full border shadow-sm ${isDarkMode ? 'bg-chumbo-950/80 backdrop-blur-md border-gray-800' : 'bg-gray-100/80 backdrop-blur-md border-gray-200'}`}>
-            {(['overview', 'matches', 'list', 'room'] as const).map(tab => (
-              <button 
-                key={tab} 
-                onClick={() => setActiveTab(tab)} 
-                className={`flex-1 whitespace-nowrap px-4 md:px-6 py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all ${
-                  activeTab === tab 
-                    ? 'bg-emerald-600 text-white shadow-lg' 
-                    : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
-                }`}
-              >
-                {tab === 'overview' ? 'Panorama' : tab === 'matches' ? 'Sinergias' : tab === 'list' ? 'Participantes' : 'Mapa da Sala'}
-              </button>
-            ))}
-        </div>
+      {/* Tabs */}
+      <div className={`flex p-1 rounded-2xl w-full border shadow-sm sticky top-[72px] z-50 ${isDarkMode ? 'bg-chumbo-950/90 border-gray-800' : 'bg-gray-100/90 border-gray-200'} backdrop-blur-md`}>
+          {(['overview', 'matches', 'list', 'room'] as const).map(tab => (
+            <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-emerald-600 text-white shadow-lg' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}>
+              {tab === 'overview' ? 'Panorama' : tab === 'matches' ? 'Sinergias' : tab === 'list' ? 'Participantes' : 'Mapa da Sala'}
+            </button>
+          ))}
       </div>
 
       <div className="min-h-[500px]">
         {activeTab === 'overview' && (
           <div className="space-y-6 md:space-y-8 animate-fade-in">
+             {/* Key Indicators */}
              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                 <div className={`p-4 md:p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'}`}>
                    <p className="text-[9px] font-black text-gray-400 uppercase mb-1">Index de Negócio</p>
                    <h3 className="text-2xl md:text-3xl font-black text-emerald-600">{data.overallScore}%</h3>
                 </div>
                 <div className={`p-4 md:p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'}`}>
-                   <p className="text-[9px] font-black text-gray-400 uppercase mb-1">Pessoas Mapeadas</p>
+                   <p className="text-[9px] font-black text-gray-400 uppercase mb-1">Média de Colaboradores</p>
+                   <h3 className="text-2xl md:text-3xl font-black text-blue-500">{data.averageEmployees}</h3>
+                </div>
+                <div className={`p-4 md:p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'}`}>
+                   <p className="text-[9px] font-black text-gray-400 uppercase mb-1">Participantes</p>
                    <h3 className={`text-2xl md:text-3xl font-black ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{data.participants.length}</h3>
                 </div>
+                <div className={`p-4 md:p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'}`}>
+                   <p className="text-[9px] font-black text-gray-400 uppercase mb-1">Matches Premium</p>
+                   <h3 className="text-2xl md:text-3xl font-black text-amber-500">{allMatches.filter(m => m.score >= 80).length}</h3>
+                </div>
              </div>
+
              <div className={`p-6 md:p-8 rounded-3xl border-2 border-dashed ${isDarkMode ? 'bg-emerald-950/20 border-emerald-900/40' : 'bg-emerald-50/50 border-emerald-100'}`}>
-                <h3 className={`text-[10px] md:text-xs font-black uppercase mb-4 flex items-center gap-2 ${isDarkMode ? 'text-verde-neon' : 'text-emerald-800'}`}>
+                <h3 className={`text-[10px] font-black uppercase mb-4 flex items-center gap-2 ${isDarkMode ? 'text-verde-neon' : 'text-emerald-800'}`}>
                   <FileText className="w-4 h-4" /> Diagnóstico Estratégico (IA)
                 </h3>
                 <p className={`text-sm md:text-base font-medium leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>"{data.summary}"</p>
              </div>
+
              <div ref={chartRef} className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+                {/* Top 10 by Employees */}
                 <div className={`p-6 md:p-8 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'}`}>
-                   <h3 className="text-[10px] font-black text-gray-400 uppercase mb-6 tracking-widest flex items-center gap-2"><TrendingUp className="w-4 h-4" /> Distribuição de Index</h3>
-                   <div className="h-[300px] md:h-[350px]">
+                   <h3 className="text-[10px] font-black text-gray-400 uppercase mb-6 tracking-widest flex items-center gap-2">
+                     <Users className="w-4 h-4" /> Maiores Forças de Trabalho (Top 10)
+                   </h3>
+                   <div className="h-[300px]">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={sortedIndividuals} layout="vertical">
-                          <XAxis type="number" hide domain={[0, 100]} />
-                          <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 9, fontWeight: 'bold', fill: isDarkMode ? '#94a3b8' : '#64748b' }} axisLine={false} tickLine={false} />
-                          <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '12px' }} />
-                          <Bar dataKey="score" fill="#10B981" radius={[0, 8, 8, 0]} barSize={16} isAnimationActive={true} animationDuration={1000}>
-                             {sortedIndividuals.map((_, i) => <Cell key={i} fill={i === 0 ? '#059669' : '#10B981'} />)}
-                          </Bar>
+                        <BarChart data={topCompaniesByEmployees} layout="vertical">
+                          <XAxis type="number" hide />
+                          <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 9, fontWeight: 'bold', fill: isDarkMode ? '#94a3b8' : '#64748b' }} axisLine={false} tickLine={false} />
+                          <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '12px', fontSize: '10px' }} />
+                          <Bar dataKey="employees" fill="#3B82F6" radius={[0, 8, 8, 0]} barSize={14} isAnimationActive={true} animationDuration={1000} />
                         </BarChart>
                       </ResponsiveContainer>
                    </div>
                 </div>
+
+                {/* Distribution by Segment */}
                 <div className={`p-6 md:p-8 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'}`}>
-                   <h3 className="text-[10px] font-black text-gray-400 uppercase mb-6 tracking-widest flex items-center gap-2"><Briefcase className="w-4 h-4" /> Concentração Setorial</h3>
-                   <div className="h-[300px] md:h-[350px]">
+                   <h3 className="text-[10px] font-black text-gray-400 uppercase mb-6 tracking-widest flex items-center gap-2">
+                     <Briefcase className="w-4 h-4" /> Concentração por Segmento
+                   </h3>
+                   <div className="h-[300px]">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={sortedSegments} layout="vertical">
                            <XAxis type="number" hide />
                            <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 9, fontWeight: 'bold', fill: isDarkMode ? '#94a3b8' : '#64748b' }} axisLine={false} tickLine={false} />
-                           <Tooltip cursor={{fill: 'transparent'}} />
-                           <Bar dataKey="value" fill="#3B82F6" radius={[0, 8, 8, 0]} barSize={16} isAnimationActive={true} animationDuration={1200} />
+                           <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '12px', fontSize: '10px' }} />
+                           <Bar dataKey="value" fill="#10B981" radius={[0, 8, 8, 0]} barSize={14} isAnimationActive={true} animationDuration={1200} />
                         </BarChart>
                       </ResponsiveContainer>
                    </div>
@@ -423,17 +347,17 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
               {allMatches.slice(0, 30).map(match => (
                  <div key={match.id} className={`p-6 rounded-3xl border shadow-sm hover:shadow-md transition-shadow cursor-pointer group flex flex-col justify-between h-full ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'}`} onClick={() => setSelectedMatch(match)}>
                     <div className="flex justify-between items-center mb-4">
-                       <span className={`text-xl md:text-2xl font-black px-3 py-1 rounded-xl border ${isDarkMode ? 'text-verde-neon bg-emerald-950/20 border-emerald-900/40' : 'text-emerald-600 bg-emerald-50 border-emerald-100'}`}>{match.score}%</span>
+                       <span className={`text-xl font-black px-3 py-1 rounded-xl border ${isDarkMode ? 'text-verde-neon bg-emerald-950/20 border-emerald-900/40' : 'text-emerald-600 bg-emerald-50 border-emerald-100'}`}>{match.score}%</span>
                        <Zap className="w-4 h-4 text-gray-200 group-hover:text-emerald-300 transition-colors" />
                     </div>
                     <div className="flex items-center gap-4 mb-4">
                        <div className="flex-1 min-w-0">
-                          <p className={`font-bold text-sm md:text-base truncate ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{match.p1.name}</p>
+                          <p className={`font-bold text-sm truncate ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{match.p1.name}</p>
                           <p className="text-[9px] font-bold text-gray-400 uppercase truncate">{match.p1.company}</p>
                        </div>
                        <ArrowRight className="w-4 h-4 text-gray-200" />
                        <div className="flex-1 min-w-0 text-right">
-                          <p className={`font-bold text-sm md:text-base truncate ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{match.p2.name}</p>
+                          <p className={`font-bold text-sm truncate ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{match.p2.name}</p>
                           <p className="text-[9px] font-bold text-gray-400 uppercase truncate">{match.p2.company}</p>
                        </div>
                     </div>
