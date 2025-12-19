@@ -2,7 +2,7 @@
 import React, { useState, ChangeEvent } from 'react';
 import { Upload, FileText, Play, Database, CheckCircle, Calendar, Clock, RefreshCw } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { LOGO_URL } from '../App';
+import { LOGO_URL } from '../constants';
 
 interface InputViewProps {
   onAnalyze: (data: string) => void;

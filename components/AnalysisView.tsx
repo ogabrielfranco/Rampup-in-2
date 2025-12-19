@@ -12,7 +12,7 @@ import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
 import pptxgen from 'pptxgenjs';
-import { LOGO_URL } from '../App';
+import { LOGO_URL } from '../constants';
 
 interface AnalysisViewProps {
   data: AnalysisResult;
@@ -53,7 +53,7 @@ const CustomTooltip = ({ active, payload, label, isDarkMode, suffix = '%' }: any
   return null;
 };
 
-const MetricCard = ({ title, value, subtext, icon: Icon, isDarkMode, accentColor, trend }: any) => (
+const MetricCard = ({ title, value, icon: Icon, isDarkMode, accentColor, trend }: any) => (
   <div className={`relative overflow-hidden p-6 rounded-2xl border shadow-lg group transition-all hover:scale-[1.02] ${isDarkMode ? 'bg-chumbo-900 border-gray-800' : 'bg-white border-gray-100'}`}>
     <div className={`absolute top-0 right-0 w-32 h-32 transform translate-x-8 -translate-y-8 rounded-full opacity-5 group-hover:opacity-10 transition-opacity ${accentColor}`}></div>
     <div className="relative z-10">
@@ -70,7 +70,6 @@ const MetricCard = ({ title, value, subtext, icon: Icon, isDarkMode, accentColor
       <div>
         <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>{title}</p>
         <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{value}</h3>
-        {subtext && <p className={`text-[10px] mt-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>{subtext}</p>}
       </div>
     </div>
   </div>
