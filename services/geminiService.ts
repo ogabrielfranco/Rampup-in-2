@@ -9,15 +9,15 @@ const analysisSchema = {
   properties: {
     overallScore: {
       type: Type.NUMBER,
-      description: "O 'Business Index' geral (0-100) baseado no potencial de novos negócios do grupo.",
+      description: "O 'Business Index' geral (0-100) da agenda, baseado na densidade de sinergias do grupo.",
     },
     summary: {
       type: Type.STRING,
-      description: "Um resumo executivo analítico de alto nível, abordando tendências do setor, diagnósticos de mercado e teses de investimento.",
+      description: "Resumo executivo analítico focado em ecossistemas, pontes de inovação e hubs de sinergia.",
     },
     averageEmployees: {
       type: Type.NUMBER,
-      description: "A média de colaboradores do grupo de participantes mapeados.",
+      description: "Média aritmética de colaboradores das empresas.",
     },
     participants: {
       type: Type.ARRAY,
@@ -41,7 +41,10 @@ const analysisSchema = {
         type: Type.OBJECT,
         properties: {
           participantId: { type: Type.STRING },
-          score: { type: Type.NUMBER },
+          score: { 
+            type: Type.NUMBER, 
+            description: "Índice de Negócio individual (1-100). Cálculo: Essencialidade (50%) + Poder de Indicação (30%) + Sinergia de Ecossistema (20%)." 
+          },
           potentialConnections: { type: Type.NUMBER },
           scoreReasoning: { type: Type.STRING },
           recommendedConnections: {
@@ -51,7 +54,7 @@ const analysisSchema = {
               properties: {
                 partnerId: { type: Type.STRING },
                 score: { type: Type.NUMBER },
-                reason: { type: Type.STRING }
+                reason: { type: Type.STRING, description: "Justificativa baseada em Cadeia de Valor, Hub de Sinergia ou Ponte de Inovação." }
               },
               required: ["partnerId", "score", "reason"]
             }
@@ -98,21 +101,26 @@ const analysisSchema = {
 
 export const analyzeNetworkingData = async (rawData: string): Promise<AnalysisResult> => {
   const prompt = `
-    ATUE COMO UM ESTRATEGISTA DE M&A E CONSULTOR SÊNIOR DE CONEXÕES EMPRESARIAIS.
+    ATUE COMO UM ESPECIALISTA EM GESTÃO DE ECOSSISTEMAS DE NEGÓCIOS E ANALISTA DE DADOS B2B.
     
     **MISSÃO:**
-    Gerar um mapeamento EXAUSTIVO de sinergias para TODOS os participantes.
+    Gerar um Índice de Negócio (IN) ultra-preciso (1-100) para cada participante.
     
-    **CRITÉRIOS DE MATCHMAKING AVANÇADOS:**
-    1. **Sinergia Operacional e de Cadeia:** Cruzamento de GAPs de uma empresa com soluções de outra.
-    2. **Maturidade e Porte:** Alinhamento baseado em volume de colaboradores.
-    3. **TENDÊNCIAS DE SETOR:** Considere como a convergência setorial (ex: Fintech no Varejo, IA na Construção) cria valor.
-    4. **METAS DE NEGÓCIO:** Analise potenciais metas de escala, eficiência ou saída (Exit) baseado no perfil da empresa.
+    **LOGICA DE RACIOCÍNIO (ANÁLISE DE ECOSSISTEMA):**
+    1. **Mapeamento de Cadeia de Valor:** Identifique quem é o fornecedor potencial e quem é o comprador direto dentro do grupo.
+    2. **Hubs de Sinergia:** Agrupe os participantes por 'Público-Alvo Compartilhado'.
+    3. **Pontes de Inovação:** Identifique empresas de tecnologia ou consultoria que podem otimizar as operações das empresas tradicionais da lista.
+    4. **Análise de Autoridade e Mídia:** Conecte quem possui canais de divulgação a quem precisa de visibilidade.
 
-    **REQUISITOS MANDATÓRIOS:**
-    - LISTA EXAUSTIVA: Para cada participante, mapeie conexões com praticamente todos os outros participantes.
-    - JUSTIFICATIVAS ULTRA-GRANULARES: Não use justificativas genéricas. Use termos como "Integração Vertical de Supply Chain", "Redução de CAC via Cross-Sell Setorial", "M&A Opportunity", "Sinergia de GTM em novos territórios".
-    - O HOST: Trate o Host como uma peça estratégica central.
+    **CRITÉRIOS PARA O CÁLCULO DO IN (0-100):**
+    - **Essencialidade (50%):** O serviço é obrigatório/essencial para os outros? (Ex: Jurídico, Contabilidade, Software = Alto).
+    - **Poder de Indicação (30%):** Este negócio está no início da jornada de compra de outros? (Ex: Imobiliária indica reforma = Alto).
+    - **Densidade de Conexão (20%):** O score individual é reflexo da quantidade e qualidade de conexões.
+
+    **REGRAS CRÍTICAS:**
+    - É PROIBIDO um participante ter score alto (ex: >80) sem possuir conexões sugeridas listadas no array 'recommendedConnections'.
+    - TODOS os participantes devem ter sinergias de compra/venda mapeadas.
+    - O HOST deve ser considerado um participante comum dentro do ecossistema para fins de conexão.
 
     DADOS:
     ${rawData}
@@ -122,13 +130,19 @@ export const analyzeNetworkingData = async (rawData: string): Promise<AnalysisRe
 
 export const analyzeHostPotential = async (hostsData: string, participantsData: string): Promise<AnalysisResult> => {
     const prompt = `
-      ESTRATEGISTA DE INVESTIMENTOS E ROI PARA EVENTOS.
+      ATUE COMO UM ANALISTA DE DADOS E ESTRATEGISTA DE NETWORKING B2B.
   
-      **ANÁLISE DE IMPACTO DO HOST E CONVIDADOS:**
-      Mapeie exaustivamente como cada convidado se conecta com o(s) Host(s) e entre si.
-      Considere tendências macro do setor e metas de escala para justificar os matches.
-      Gere justificativas granulares focadas em geração de receita imediata e alianças de longo prazo.
-  
+      **MISSÃO:** Analisar o ecossistema de negócios integrando o Host como parte dos participantes.
+      
+      **CRITÉRIOS DE CÁLCULO (IN):**
+      - Essencialidade (50%): Serviço obrigatório para os outros membros do grupo.
+      - Poder de Indicação (30%): Negócio no início da jornada de compra.
+      
+      **MAPEAMENTO DE CONEXÕES:**
+      - Identifique hubs de sinergia e cadeias de valor entre TODOS.
+      - Se um participante (como Rafael Castro ou Otacilio Valente) possui alto IN, ele OBRIGATORIAMENTE deve ter conexões sugeridas com outros membros.
+      - Não foque exclusivamente no host; trate-o como um nó estratégico dentro da rede total.
+
       HOST(S): ${hostsData}
       CONVIDADOS: ${participantsData}
     `;
@@ -137,7 +151,8 @@ export const analyzeHostPotential = async (hostsData: string, participantsData: 
 
 const callGemini = async (prompt: string): Promise<AnalysisResult> => {
     try {
-        const response = await ai.models.generateContent({
+        const aiInstance = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const response = await aiInstance.models.generateContent({
           model: modelName,
           contents: prompt,
           config: {
