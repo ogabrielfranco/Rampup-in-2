@@ -206,7 +206,18 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
   const topMatchesVisible = useMemo(() => allMatches.slice(0, visibleTopMatches), [allMatches, visibleTopMatches]);
 
   const fullList = useMemo(() => {
-    let list = [...data.individualScores];
+    // Ensure every participant is present in the list, even if the individual score wasn't explicitly provided
+    let list = data.participants.map(p => {
+      const existingScore = data.individualScores.find(s => s.participantId === p.id);
+      return {
+        participantId: p.id,
+        score: existingScore?.score || 0,
+        potentialConnections: existingScore?.potentialConnections || 0,
+        recommendedConnections: existingScore?.recommendedConnections || [],
+        scoreReasoning: existingScore?.scoreReasoning || 'Perfil mapeado para o evento.'
+      };
+    });
+
     if (deferredSearchTerm) {
       const term = deferredSearchTerm.toLowerCase();
       list = list.filter(s => {
@@ -218,16 +229,16 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
       list = list.filter(s => participantMap.get(s.participantId)?.segment === filterSegment);
     }
     return list.sort((a, b) => b.score - a.score);
-  }, [data.individualScores, deferredSearchTerm, filterSegment, participantMap]);
+  }, [data.participants, data.individualScores, deferredSearchTerm, filterSegment, participantMap]);
 
   const sortedSegments = useMemo(() => [...data.segmentDistribution].sort((a,b) => b.value - a.value), [data.segmentDistribution]);
   
-  const sortedIndividuals = useMemo(() => [...data.individualScores]
+  const sortedIndividuals = useMemo(() => [...fullList]
     .sort((a, b) => b.score - a.score)
     .map(s => {
       const p = participantMap.get(s.participantId);
       return { name: p?.name || '?', score: s.score };
-    }).slice(0, 10), [data.individualScores, participantMap]);
+    }).slice(0, 10), [fullList, participantMap]);
 
   const employeeStats = useMemo(() => {
     const participantsWithParsed = data.participants.map(p => ({
@@ -579,8 +590,8 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
                    </div>
                    
                    <div className={`mt-8 pt-6 border-t font-mono text-[10px] md:text-xs flex flex-wrap items-center gap-x-4 gap-y-2 ${isDarkMode ? 'border-emerald-900/30 text-emerald-400' : 'border-emerald-50 text-emerald-700'}`}>
-                      <span className="font-black uppercase bg-emerald-500/10 px-2 py-1 rounded">Fórmula:</span>
-                      <span>IN = (Sinergia * 0.4) + (Alinhamento * 0.3) + (Escala * 0.2) + (Diversidade * 0.1)</span>
+                      <span className="font-black uppercase bg-emerald-500/10 px-2 py-1 rounded">Fórmula de Negócio:</span>
+                      <span className="font-bold">IN = (Sinergia * 0.4) + (Alinhamento * 0.3) + (Escala * 0.2) + (Diversidade * 0.1)</span>
                    </div>
                 </div>
              </div>
@@ -745,13 +756,16 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
                                     key={i} 
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      setSelectedMatch({
-                                        p1: p,
-                                        p2: participantMap.get(rec.partnerId),
-                                        score: rec.score,
-                                        reason: rec.reason,
-                                        id: `${p.id}-${rec.partnerId}`
-                                      });
+                                      const partner = participantMap.get(rec.partnerId);
+                                      if (partner) {
+                                          setSelectedMatch({
+                                            p1: p,
+                                            p2: partner,
+                                            score: rec.score,
+                                            reason: rec.reason,
+                                            id: `${p.id}-${rec.partnerId}`
+                                          });
+                                      }
                                     }}
                                     className="text-xs p-5 rounded-2xl border dark:border-gray-700 bg-white dark:bg-gray-800 flex justify-between gap-4 shadow-sm cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md"
                                   >
@@ -766,6 +780,10 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
                                 ))}
                              </div>
                              {!score.recommendedConnections?.length && <p className="text-xs opacity-50 italic text-center py-4">Sem recomendações específicas para este perfil.</p>}
+                             <div className="p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
+                                <h5 className="text-[10px] font-black uppercase opacity-40 mb-2">Justificativa do Índice</h5>
+                                <p className="text-xs italic leading-relaxed opacity-80">"{score.scoreReasoning}"</p>
+                             </div>
                            </div>
                          )}
                       </div>
