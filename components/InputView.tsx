@@ -1,6 +1,6 @@
 
 import React, { useState, ChangeEvent } from 'react';
-import { Upload, FileText, Play, Database, CheckCircle, Calendar, Clock } from 'lucide-react';
+import { Upload, FileText, Play, Database, CheckCircle, Calendar, Clock, RefreshCw } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { LOGO_URL } from '../App';
 
@@ -11,57 +11,22 @@ interface InputViewProps {
   onBack: () => void;
 }
 
-const DEMO_DATA = `Evento: Summit de Negócios Brasil 2025
+const NAMES = ["João", "Maria", "Carlos", "Ana", "Pedro", "Lucia", "Marcos", "Fernanda", "Roberto", "Juliana", "Eduardo", "Sofia", "Rafael", "Beatriz", "Lucas", "Gabriela", "Felipe", "Renata", "Thiago", "Camila", "Bruno", "Vanessa", "Rodrigo", "Patrícia", "Marcelo", "Aline", "Gustavo", "Letícia", "André", "Mônica", "Ricardo", "Cláudia", "Fernando", "Tatiane", "Igor", "Larissa", "Diego", "Sara", "Otávio", "Helena", "Cauã", "Isabela", "Samuel", "Luana", "Davi", "Lorena", "Matheus", "Bianca", "Renan"];
+const SURNAMES = ["Silva", "Souza", "Pereira", "Oliveira", "Santos", "Costa", "Lima", "Rocha", "Almeida", "Dias", "Mello", "Nunes", "Torres", "Gomes", "Martins", "Ferreira", "Barbosa", "Carvalho", "Rodrigues", "Alves", "Cardoso", "Faria", "Castro", "Ribeiro", "Mendes", "Henrique", "Duarte", "Vieira", "Santana", "Pinto", "Teixeira", "Moura", "Ramos", "Campos", "Moreira", "Guimarães", "Batista", "Freitas", "Matos", "Lopes", "Correia", "Araújo", "Soares", "Cunha", "Neves", "Sales"];
+const SEGMENTS = ["Marketing Digital", "Imobiliária", "Software", "Eventos e Buffet", "Construção Civil", "Contabilidade", "E-commerce", "Jurídico", "Seguros", "Consultoria Financeira", "Tráfego Pago", "Saúde", "Academia", "Arquitetura", "Logística", "Moda", "TI", "Energia Solar", "Nutrição", "Automação", "Estética", "Idiomas", "Mecânica", "Design", "Vídeo", "RH", "Turismo", "Materiais de Construção", "Psicologia", "Gastronomia", "Veterinária", "Coworking", "Indústria", "Segurança"];
+const COMPANIES_SUFFIX = ["Tech", "Group", "Solutions", "Associados", "Sistemas", "Consultoria", "Serviços", "Indústria", "Comércio", "Logística", "Estratégia", "Digital", "Prime", "Elite", "Global", "Nova", "Forte", "Smart", "Direct", "Plus"];
 
-1. João Silva, JS Marketing, Marketing Digital, 15 colaboradores
-2. Maria Souza, Souza Imóveis, Imobiliária, 8 colaboradores
-3. Carlos Pereira, TechDev Solutions, Desenvolvimento de Software, 45 colaboradores
-4. Ana Oliveira, Oliveira Doces Finos, Confeitaria e Buffet, 12 colaboradores
-5. Pedro Santos, Santos Engenharia, Construção Civil, 150 colaboradores
-6. Lucia Costa, Costa Contabilidade, Contabilidade, 20 colaboradores
-7. Marcos Lima, Lima Shop, E-commerce de Eletrônicos, 5 colaboradores
-8. Fernanda Rocha, Rocha & Associados, Jurídico Trabalhista, 10 colaboradores
-9. Roberto Almeida, Almeida Seguros, Corretora de Seguros, 12 colaboradores
-10. Juliana Dias, Finanças 360, Consultoria Financeira, 3 colaboradores
-11. Eduardo Mello, Mello Ads, Gestão de Tráfego Pago, 4 colaboradores
-12. Sofia Nunes, Nunes Odonto, Clínica Odontológica, 6 colaboradores
-13. Rafael Torres, Torres Fitness, Academia, 18 colaboradores
-14. Beatriz Gomes, Studio Bea, Arquitetura e Interiores, 2 colaboradores
-15. Lucas Martins, Martins Log, Logística e Transporte, 80 colaboradores
-16. Gabriela Ferreira, Gabi Modas, Varejo de Moda Feminina, 9 colaboradores
-17. Felipe Barbosa, Barbosa Tech, Suporte de TI, 7 colaboradores
-18. Renata Carvalho, Carvalho Eventos, Cerimonialista, 5 colaboradores
-19. Thiago Rodrigues, Rodrigues Solar, Energia Solar, 25 colaboradores
-20. Camila Alves, NutriVida, Nutrição Clínica, 2 colaboradores
-21. Bruno Cardoso, Cardoso Automação, Automação Residencial, 6 colaboradores
-22. Vanessa Lima, Estética Vanessa, Clínica de Estética, 4 colaboradores
-23. Rodrigo Faria, Faria Imóveis, Imobiliária Comercial, 12 colaboradores
-24. Patrícia Castro, Castro Idiomas, Escola de Inglês, 15 colaboradores
-25. Marcelo Ribeiro, Ribeiro Motors, Oficina Mecânica Premium, 10 colaboradores
-26. Aline Mendes, AM Design, Design Gráfico e Branding, 3 colaboradores
-27. Gustavo Henrique, GH Produções, Produção de Vídeo, 4 colaboradores
-28. Letícia Duarte, Duarte RH, Recrutamento e Seleção, 8 colaboradores
-29. André Vieira, Vieira Consultoria, Consultoria Empresarial, 5 colaboradores
-30. Mônica Santana, Santana Viagens, Agência de Turismo, 6 colaboradores
-31. Ricardo Pinto, Pinto & Filhos, Material de Construção, 35 colaboradores
-32. Cláudia Teixeira, Teixeira Psicologia, Psicologia Organizacional, 4 colaboradores
-33. Fernando Moura, Moura Café, Cafeteria Gourmet, 12 colaboradores
-34. Tatiane Ramos, Ramos Semijoias, Venda de Acessórios, 2 colaboradores
-35. Igor Santos, Santos Web, Criação de Sites, 5 colaboradores
-36. Larissa Campos, Campos Veterinária, Clínica Veterinária, 8 colaboradores
-37. Diego Moreira, Moreira Barber, Barbearia, 6 colaboradores
-40. Sara Costa, Costa Coworking, Espaço de Coworking, 4 colaboradores
-41. Otávio Guimarães, Guimarães Têxtil, Indústria Têxtil, 200 colaboradores
-42. Helena Batista, Batista Clean, Limpeza Comercial, 50 colaboradores
-43. Cauã Freitas, Freitas Print, Gráfica Rápida, 15 colaboradores
-44. Isabela Matos, Matos Coaching, Coaching de Carreira, 1 colaboradores
-45. Samuel Lopes, Lopes Security, Segurança Eletrônica, 30 colaboradores
-46. Luana Correia, Correia Crafts, Artesanato de Luxo, 2 colaboradores
-47. Davi Araújo, Araújo Burger, Hamburgueria Artesanal, 14 colaboradores
-48. Lorena Soares, Soares Pilates, Studio de Pilates, 3 colaboradores
-49. Matheus Cunha, Cunha Invest, Assessoria de Investimentos, 10 colaboradores
-50. Bianca Neves, Neves Makeup, Maquiadora Profissional, 1 colaboradores
-51. Renan Sales, Sales Eletro, Instalações Elétricas, 8 colaboradores`;
+function generateRandomDemoData(count: number): string {
+  let data = "Evento: Summit de Negócios Randômico 2025\n\n";
+  for (let i = 1; i <= count; i++) {
+    const name = `${NAMES[Math.floor(Math.random() * NAMES.length)]} ${SURNAMES[Math.floor(Math.random() * SURNAMES.length)]}`;
+    const segment = SEGMENTS[Math.floor(Math.random() * SEGMENTS.length)];
+    const company = `${SURNAMES[Math.floor(Math.random() * SURNAMES.length)]} ${COMPANIES_SUFFIX[Math.floor(Math.random() * COMPANIES_SUFFIX.length)]}`;
+    const employees = Math.floor(Math.random() * 500) + 1;
+    data += `${i}. ${name}, ${company}, ${segment}, ${employees} colaboradores\n`;
+  }
+  return data;
+}
 
 const InputView: React.FC<InputViewProps> = ({ onAnalyze, isLoading, isDarkMode, onBack }) => {
   const [inputText, setInputText] = useState('');
@@ -100,10 +65,11 @@ const InputView: React.FC<InputViewProps> = ({ onAnalyze, isLoading, isDarkMode,
   };
 
   const handleDemo = () => {
-    setEventName('Summit de Negócios Brasil 2025');
+    const randomData = generateRandomDemoData(40);
+    setEventName('Summit de Negócios Randômico 2025');
     setEventDate('2025-11-15');
     setEventTime('09:00');
-    setInputText(DEMO_DATA);
+    setInputText(randomData);
     setActiveMethod('paste');
   };
 
@@ -119,11 +85,11 @@ Horário: ${eventTime || 'N/A'}
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto animate-fade-in px-2 md:px-0">
+    <div className="w-full max-w-3xl mx-auto animate-fade-in px-2 md:px-0 mb-10">
       <div className="mb-4 md:mb-6">
         <button 
           onClick={onBack}
-          className={`text-sm font-medium hover:underline flex items-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}
+          className={`text-sm font-medium hover:underline flex items-center transition-all active:scale-95 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}
         >
           &larr; Voltar para seleção
         </button>
@@ -156,14 +122,13 @@ Horário: ${eventTime || 'N/A'}
           <div className="flex justify-end">
              <button 
                 onClick={handleDemo}
-                className={`text-xs font-medium flex items-center transition-colors px-3 py-1 rounded-full ${isDarkMode ? 'bg-gray-800 text-verde-light hover:bg-gray-700' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'}`}
+                className={`text-xs font-bold flex items-center transition-all active:scale-95 px-4 py-2 rounded-full shadow-sm ${isDarkMode ? 'bg-gray-800 text-verde-light hover:bg-gray-700' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'}`}
               >
-                <Database className="w-3 h-3 mr-1.5" />
-                Carregar Exemplo
+                <RefreshCw className="w-3 h-3 mr-1.5" />
+                Simular Lista Randômica
               </button>
           </div>
 
-          {/* Agenda Details Section */}
           <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
              <h3 className={`text-sm font-bold uppercase mb-4 flex items-center gap-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                 <FileText className="w-4 h-4" /> Detalhes da Agenda

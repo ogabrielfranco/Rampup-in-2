@@ -9,12 +9,12 @@ import { AnalysisResult, AppView, AppMode } from './types';
 import { Network, Moon, Sun } from 'lucide-react';
 
 const LOADING_MESSAGES = [
-  "Calculando sinergia entre participantes...",
-  "Identificando e agrupando segmentos de mercado...",
-  "Calculando scores individuais de saúde do negócio...",
-  "Formando as melhores mesas de conexão...",
-  "Mapeando as conexões de maior valor agregado...",
-  "Finalizando a matriz de oportunidades..."
+  "Calculando sinergia estratégica...",
+  "Identificando clusters setoriais...",
+  "Calculando scores individuais...",
+  "Formando as melhores conexões...",
+  "Mapeando oportunidades de valor...",
+  "Otimizando matriz de negócios..."
 ];
 
 export const LOGO_URL = "https://lh3.googleusercontent.com/pw/AP1GczMP2TMLrL7jJinfgjlYoQwz5k6p6fQNHEo6tdX1nN_Wo1jId1OkfiTaNAPpXGRYUElU2dT2QaGtOXciVla2W1-wRRqNBGiYSIPbMuSKlgiaalAGG0dlo96PIPo6hqD5LTPYdRWZepZJIdyXpokc6lsJ=w969-h387-s-no-gm?authuser=0";
@@ -24,10 +24,9 @@ const App: React.FC = () => {
   const [appMode, setAppMode] = useState<AppMode>('GENERAL');
   const [results, setResults] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isDarkMode, setIsDarkMode] = useState(false); // Default to Light Mode as requested
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
 
-  // Apply dark mode class to html element
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
@@ -36,7 +35,6 @@ const App: React.FC = () => {
     }
   }, [isDarkMode]);
 
-  // Rotating loading messages randomly
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | undefined;
     if (view === AppView.ANALYZING) {
@@ -60,6 +58,7 @@ const App: React.FC = () => {
   const handleSelectMode = (mode: AppMode) => {
     setAppMode(mode);
     setView(AppView.INPUT);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleGeneralAnalyze = async (text: string) => {
@@ -69,6 +68,7 @@ const App: React.FC = () => {
       const result = await analyzeNetworkingData(text);
       setResults(result);
       setView(AppView.RESULTS);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
       console.error(err);
       setError("Falha ao analisar os dados. Verifique sua conexão e tente novamente.");
@@ -83,6 +83,7 @@ const App: React.FC = () => {
       const result = await analyzeHostPotential(hostsData, participantsData);
       setResults(result);
       setView(AppView.RESULTS);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
       console.error(err);
       setError("Falha ao analisar os dados do Host. Tente novamente.");
@@ -94,45 +95,47 @@ const App: React.FC = () => {
     setResults(null);
     setView(AppView.SELECTION);
     setError(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleBackToSelection = () => {
     setView(AppView.SELECTION);
     setError(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
     <div className={`min-h-screen font-sans transition-colors duration-300 flex flex-col ${isDarkMode ? 'bg-black text-white selection:bg-verde-neon selection:text-black' : 'bg-gray-50 text-gray-900 selection:bg-emerald-100'}`}>
-      <header className={`border-b sticky top-0 z-50 transition-colors duration-300 ${isDarkMode ? 'bg-chumbo-950 border-gray-800' : 'bg-white border-gray-200'}`}>
+      <header className={`border-b sticky top-0 z-[60] transition-colors duration-300 backdrop-blur-md ${isDarkMode ? 'bg-chumbo-950/80 border-gray-800' : 'bg-white/80 border-gray-200'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView(AppView.SELECTION)}>
-            <div className={`flex items-center justify-center p-1 rounded-md h-10 w-auto ${isDarkMode ? 'bg-transparent' : 'bg-white'}`}>
+          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setView(AppView.SELECTION)}>
+            <div className={`flex items-center justify-center p-1 rounded-md h-9 md:h-10 w-auto transition-transform group-hover:scale-105 active:scale-95 ${isDarkMode ? 'bg-transparent' : 'bg-white'}`}>
                <img 
                  src={LOGO_URL} 
                  alt="Rampup Business" 
-                 className={`h-full w-auto object-contain ${isDarkMode ? 'brightness-0 invert' : ''}`} 
+                 className={`h-full w-auto object-contain transition-all ${isDarkMode ? 'brightness-0 invert' : ''}`} 
                />
             </div>
             <div className={`h-6 w-px ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
-            <span className={`text-xl font-bold bg-clip-text text-transparent ${isDarkMode ? 'bg-gradient-to-r from-white to-gray-400' : 'bg-gradient-to-r from-gray-900 to-gray-600'}`}>
+            <span className={`text-lg md:text-xl font-black tracking-tighter bg-clip-text text-transparent ${isDarkMode ? 'bg-gradient-to-r from-white to-gray-500' : 'bg-gradient-to-r from-gray-900 to-gray-500'}`}>
               IN
             </span>
           </div>
           
           <button 
             onClick={() => setIsDarkMode(!isDarkMode)}
-            className={`p-2 rounded-full transition-all ${isDarkMode ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-            title={isDarkMode ? "Modo Claro" : "Modo Escuro"}
+            className={`p-2.5 rounded-full transition-all active:scale-90 ${isDarkMode ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
           >
-            {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            {isDarkMode ? <Sun className="h-4 md:h-5 w-4 md:w-5" /> : <Moon className="h-4 md:h-5 w-4 md:w-5" />}
           </button>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full flex flex-col">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10 flex-grow w-full flex flex-col">
         {error && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg flex items-center animate-pulse">
-            <span className="mr-2">⚠️</span> {error}
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-2xl flex items-center animate-fade-in">
+            <span className="mr-3 text-lg">⚠️</span> 
+            <span className="text-sm font-bold">{error}</span>
           </div>
         )}
 
@@ -141,7 +144,7 @@ const App: React.FC = () => {
         )}
 
         {view === AppView.INPUT && (
-          <div className="animate-fade-in pt-1">
+          <div className="animate-fade-in">
             {appMode === 'GENERAL' ? (
               <InputView 
                 onAnalyze={handleGeneralAnalyze} 
@@ -161,21 +164,21 @@ const App: React.FC = () => {
         )}
 
         {view === AppView.ANALYZING && (
-          <div className="flex flex-col items-center justify-center pt-20 animate-fade-in text-center px-4">
-            <div className="relative mb-8">
-              <div className={`w-24 h-24 border-4 rounded-full animate-spin ${isDarkMode ? 'border-gray-800 border-t-verde-neon' : 'border-gray-200 border-t-emerald-600'}`}></div>
-              <div className={`absolute top-0 left-0 w-24 h-24 border-4 rounded-full animate-pulse border-transparent ${isDarkMode ? 'border-b-verde-light' : 'border-b-emerald-400'}`}></div>
+          <div className="flex flex-col items-center justify-center pt-20 animate-fade-in text-center px-6">
+            <div className="relative mb-10">
+              <div className={`w-28 h-28 border-4 rounded-[2.5rem] animate-spin ${isDarkMode ? 'border-gray-800 border-t-verde-neon' : 'border-gray-200 border-t-emerald-600'}`}></div>
+              <div className={`absolute top-0 left-0 w-28 h-28 border-4 rounded-[2.5rem] animate-pulse border-transparent ${isDarkMode ? 'border-b-verde-light' : 'border-b-emerald-400'}`}></div>
               <div className="absolute inset-0 flex items-center justify-center">
-                 <Network className={`w-8 h-8 animate-pulse ${isDarkMode ? 'text-verde-light' : 'text-emerald-600'}`} />
+                 <Network className={`w-10 h-10 animate-pulse ${isDarkMode ? 'text-verde-light' : 'text-emerald-600'}`} />
               </div>
             </div>
             
-            <div className="h-16 flex items-center justify-center">
-               <h2 key={loadingMessageIndex} className={`text-xl md:text-2xl font-semibold animate-fade-in ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+            <div className="h-20 flex items-center justify-center max-w-sm mx-auto">
+               <h2 key={loadingMessageIndex} className={`text-xl md:text-2xl font-black uppercase tracking-tighter leading-tight animate-fade-in ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
                  {LOADING_MESSAGES[loadingMessageIndex]}
                </h2>
             </div>
-            <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Aguarde enquanto nossa IA processa os dados...</p>
+            <p className={`mt-4 text-sm font-bold opacity-40 uppercase tracking-widest ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Processamento de IA em tempo real</p>
           </div>
         )}
 
@@ -184,16 +187,21 @@ const App: React.FC = () => {
         )}
       </main>
 
-      <footer className={`py-8 text-center border-t transition-colors ${isDarkMode ? 'bg-chumbo-950 border-gray-800' : 'bg-white border-gray-200'}`}>
-        <div className="flex flex-col items-center justify-center gap-3">
+      <footer className={`py-10 text-center border-t transition-colors ${isDarkMode ? 'bg-chumbo-950 border-gray-800' : 'bg-white border-gray-200 shadow-inner'}`}>
+        <div className="flex flex-col items-center justify-center gap-4">
            <img 
              src={LOGO_URL} 
              alt="Rampup Business" 
-             className={`h-8 opacity-70 hover:opacity-100 transition-all ${isDarkMode ? 'brightness-0 invert' : 'grayscale hover:grayscale-0'}`} 
+             className={`h-8 opacity-60 hover:opacity-100 transition-all cursor-pointer hover:scale-105 ${isDarkMode ? 'brightness-0 invert' : 'grayscale hover:grayscale-0'}`} 
            />
-           <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-             Pensado e desenvolvido pela Rampup Business
-           </p>
+           <div className="space-y-1">
+             <p className={`text-[10px] md:text-xs font-black uppercase tracking-[0.2em] ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`}>
+               Powered by Rampup Business Intel
+             </p>
+             <p className={`text-[9px] font-bold opacity-30 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+               © {new Date().getFullYear()} • Strategic Networking Intelligence
+             </p>
+           </div>
         </div>
       </footer>
     </div>

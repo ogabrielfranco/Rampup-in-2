@@ -6,7 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, 
   CartesianGrid, LabelList
 } from 'recharts';
-import { Users, TrendingUp, Link, ArrowLeft, ArrowRight, FileSpreadsheet, List, Layers, Search, Building2, X, Briefcase, LayoutTemplate, Crown, Download, ChevronRight, FileText, Presentation, ChevronDown, ChevronUp } from 'lucide-react';
+import { Users, TrendingUp, Link, ArrowLeft, ArrowRight, FileSpreadsheet, List, Layers, Search, Building2, X, Briefcase, LayoutTemplate, Crown, Download, ChevronRight, FileText, Presentation, ChevronDown, ChevronUp, UserPlus, Info } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
@@ -31,15 +31,21 @@ const formatLayoutName = (layout: string) => {
   return map[layout] || layout;
 };
 
-const CustomTooltip = ({ active, payload, label, isDarkMode }: any) => {
+const parseEmployeeCount = (s?: string): number => {
+  if (!s) return 0;
+  const match = s.match(/\d+/);
+  return match ? parseInt(match[0], 10) : 0;
+};
+
+const CustomTooltip = ({ active, payload, label, isDarkMode, suffix = '%' }: any) => {
   if (active && payload && payload.length) {
     const dataPoint = payload[0];
     return (
       <div className={`p-4 rounded-xl shadow-2xl border backdrop-blur-md ${isDarkMode ? 'bg-gray-900/95 border-gray-700 text-white' : 'bg-white/95 border-gray-100 text-gray-900'}`}>
         <p className="font-bold text-sm mb-2 border-b border-gray-200 dark:border-gray-700 pb-2">{label}</p>
         <div className="flex items-center gap-3 text-sm">
-          <span className={`flex-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Índice (IN):</span>
-          <span className="font-bold font-mono text-lg">{dataPoint.value}%</span>
+          <span className={`flex-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Valor:</span>
+          <span className="font-bold font-mono text-lg">{dataPoint.value}{suffix}</span>
         </div>
       </div>
     );
@@ -48,7 +54,7 @@ const CustomTooltip = ({ active, payload, label, isDarkMode }: any) => {
 };
 
 const MetricCard = ({ title, value, subtext, icon: Icon, isDarkMode, accentColor, trend }: any) => (
-  <div className={`relative overflow-hidden p-6 rounded-2xl border shadow-lg group ${isDarkMode ? 'bg-chumbo-900 border-gray-800' : 'bg-white border-gray-100'}`}>
+  <div className={`relative overflow-hidden p-6 rounded-2xl border shadow-lg group transition-all hover:scale-[1.02] ${isDarkMode ? 'bg-chumbo-900 border-gray-800' : 'bg-white border-gray-100'}`}>
     <div className={`absolute top-0 right-0 w-32 h-32 transform translate-x-8 -translate-y-8 rounded-full opacity-5 group-hover:opacity-10 transition-opacity ${accentColor}`}></div>
     <div className="relative z-10">
       <div className="flex justify-between items-start mb-4">
@@ -70,12 +76,85 @@ const MetricCard = ({ title, value, subtext, icon: Icon, isDarkMode, accentColor
   </div>
 );
 
+const MatchDetailModal = ({ match, onClose, isDarkMode }: { match: any, onClose: () => void, isDarkMode: boolean }) => {
+  if (!match) return null;
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+      <div 
+        className={`relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl border scrollbar-hide ${isDarkMode ? 'bg-chumbo-950 border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className={`p-6 md:p-10 ${isDarkMode ? 'bg-gradient-to-br from-chumbo-900 to-black' : 'bg-gradient-to-br from-emerald-50 to-white'}`}>
+          <div className="flex justify-between items-start mb-8 sticky top-0 bg-transparent z-10">
+            <div>
+              <span className={`inline-block px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest mb-3 shadow-sm ${match.score >= 90 ? 'bg-emerald-500 text-white' : 'bg-gray-500 text-white'}`}>
+                Match Estratégico: {match.score}%
+              </span>
+              <h2 className="text-2xl md:text-3xl font-black tracking-tight leading-tight">Análise de Sinergia</h2>
+            </div>
+            <button 
+              onClick={onClose} 
+              className={`p-2 rounded-full hover:bg-black/10 transition-all active:scale-90 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-6 mb-8">
+            <div className={`p-6 rounded-2xl border transition-all ${isDarkMode ? 'bg-gray-800/40 border-gray-700' : 'bg-white border-emerald-100 shadow-sm'}`}>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-lg shrink-0">A</div>
+                <h3 className="font-black text-lg md:text-xl truncate">{match.p1.name}</h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 opacity-80">
+                <p className="flex items-center gap-2 text-xs md:text-sm"><Building2 className="w-4 h-4 shrink-0 text-emerald-500" /> {match.p1.company}</p>
+                <p className="flex items-center gap-2 text-xs md:text-sm"><Briefcase className="w-4 h-4 shrink-0 text-emerald-500" /> {match.p1.segment}</p>
+                <p className="flex items-center gap-2 text-xs md:text-sm"><Users className="w-4 h-4 shrink-0 text-emerald-500" /> {match.p1.employeeCount || 'N/A'} colab.</p>
+              </div>
+            </div>
+
+            <div className={`p-6 rounded-2xl border transition-all ${isDarkMode ? 'bg-gray-800/40 border-gray-700' : 'bg-white border-emerald-100 shadow-sm'}`}>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-lg shrink-0">B</div>
+                <h3 className="font-black text-lg md:text-xl truncate">{match.p2.name}</h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 opacity-80">
+                <p className="flex items-center gap-2 text-xs md:text-sm"><Building2 className="w-4 h-4 shrink-0 text-blue-500" /> {match.p2.company}</p>
+                <p className="flex items-center gap-2 text-xs md:text-sm"><Briefcase className="w-4 h-4 shrink-0 text-blue-500" /> {match.p2.segment}</p>
+                <p className="flex items-center gap-2 text-xs md:text-sm"><Users className="w-4 h-4 shrink-0 text-blue-500" /> {match.p2.employeeCount || 'N/A'} colab.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className={`p-6 md:p-8 rounded-3xl border-2 border-dashed ${isDarkMode ? 'bg-emerald-950/20 border-emerald-900/50' : 'bg-emerald-50 border-emerald-100'}`}>
+            <h4 className="flex items-center gap-2 text-[10px] font-black uppercase text-emerald-600 mb-4 tracking-widest">
+              <Info className="w-4 h-4" /> Justificativa Estratégica
+            </h4>
+            <p className="text-base md:text-lg leading-relaxed italic opacity-90">
+              "{match.reason}"
+            </p>
+          </div>
+        </div>
+        <div className="p-6 text-center border-t border-gray-800/10 bg-inherit sticky bottom-0 z-10">
+           <button 
+            onClick={onClose} 
+            className="w-full md:w-auto px-12 py-3 bg-gray-900 text-white dark:bg-emerald-600 dark:hover:bg-emerald-700 rounded-full font-black text-sm uppercase tracking-widest shadow-xl transition-all hover:scale-105 active:scale-95"
+           >
+             Fechar Detalhes
+           </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'matches' | 'list' | 'room'>('overview');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [isExportingPPTX, setIsExportingPPTX] = useState(false);
   const [visibleTopMatches, setVisibleTopMatches] = useState(INITIAL_TOP_MATCHES);
+  const [selectedMatch, setSelectedMatch] = useState<any | null>(null);
   
   const [currentLayout, setCurrentLayout] = useState<LayoutFormat>(() => {
       const saved = localStorage.getItem('rampup_saved_layout');
@@ -142,12 +221,30 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
   }, [data.individualScores, deferredSearchTerm, filterSegment, participantMap]);
 
   const sortedSegments = useMemo(() => [...data.segmentDistribution].sort((a,b) => b.value - a.value), [data.segmentDistribution]);
+  
   const sortedIndividuals = useMemo(() => [...data.individualScores]
     .sort((a, b) => b.score - a.score)
     .map(s => {
       const p = participantMap.get(s.participantId);
       return { name: p?.name || '?', score: s.score };
     }).slice(0, 10), [data.individualScores, participantMap]);
+
+  const employeeStats = useMemo(() => {
+    const participantsWithParsed = data.participants.map(p => ({
+      ...p,
+      count: parseEmployeeCount(p.employeeCount)
+    }));
+    
+    const top10Companies = participantsWithParsed
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10)
+      .map(p => ({ name: p.company, count: p.count }));
+
+    const totalEmployees = participantsWithParsed.reduce((sum, p) => sum + p.count, 0);
+    const avgEmployees = data.participants.length > 0 ? Math.round(totalEmployees / data.participants.length) : 0;
+
+    return { top10Companies, avgEmployees };
+  }, [data.participants]);
 
   const handleExportXLSX = () => {
     const rows = allMatches.map(m => ({
@@ -199,7 +296,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
     addMetric(0.5, "ÍNDICE GERAL (IN)", `${data.overallScore}%`, '059669');
     addMetric(0.5 + cardW + spacing, "PARTICIPANTES", data.participants.length.toString(), '1E3A8A');
     addMetric(0.5 + (cardW + spacing)*2, "CONEXÕES CHAVE", allMatches.filter(m => m.score >= 80).length.toString(), '581C87');
-    addMetric(0.5 + (cardW + spacing)*3, "FORMATO IDEAL", formatLayoutName(currentLayout), 'D97706');
+    addMetric(0.5 + (cardW + spacing)*3, "MÉDIA COLAB.", employeeStats.avgEmployees.toString(), 'D97706');
 
     slide2.addText("DISTRIBUIÇÃO SETORIAL PREDOMINANTE", { x: 0.5, y: 3.8, fontSize: 16, bold: true, color: '064E3B', fontFace: FONT });
     const segmentsRow = sortedSegments.slice(0, 10).map(s => `${s.name} (${s.value})`).join('  |  ');
@@ -257,7 +354,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
           scale: 4, 
           useCORS: true, 
           backgroundColor: '#ffffff',
-          width: 1440, // Fixed capture width to prevent distortion
+          width: 1440,
           height: 900
         });
         const imgData = canvas.toDataURL('image/png');
@@ -304,8 +401,8 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
     
     autoTable(doc, {
       startY: 60,
-      head: [['Índice Geral (IN)', 'Participantes', 'Conexões Chave', 'Layout Sugerido']],
-      body: [[`${data.overallScore}%`, data.participants.length, allMatches.filter(m => m.score >= 80).length, formatLayoutName(currentLayout)]],
+      head: [['Índice Geral (IN)', 'Participantes', 'Média Colab.', 'Layout Sugerido']],
+      body: [[`${data.overallScore}%`, data.participants.length, employeeStats.avgEmployees, formatLayoutName(currentLayout)]],
       theme: 'grid',
       headStyles: { fillColor: [6, 78, 59], textColor: [255, 255, 255], fontSize: 13, halign: 'center' },
       bodyStyles: { fontSize: 16, fontStyle: 'bold', halign: 'center', textColor: [30, 58, 138] },
@@ -357,7 +454,6 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
          width: 1440,
          height: 900
        });
-       // Scale to fit landscape A4
        const imgWidth = pageWidth - 30;
        const imgHeight = (canvas.height * imgWidth) / canvas.width;
        doc.addImage(canvas.toDataURL('image/png'), 'PNG', 15, 30, imgWidth, imgHeight);
@@ -368,8 +464,9 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
   };
 
   return (
-    <div className="space-y-8 px-2 md:px-0">
-      {/* EXPORT CONTAINER (FORCED HIGH CONTRAST & NO DISTORTION) */}
+    <div className="space-y-6 md:space-y-8 px-2 md:px-0 mb-12">
+      <MatchDetailModal match={selectedMatch} onClose={() => setSelectedMatch(null)} isDarkMode={isDarkMode} />
+      
       <div style={{ position: 'absolute', left: '-9999px', top: 0, width: '1440px', height: '900px', visibility: 'visible', zIndex: -1, background: 'white' }} id="seating-map-export">
          <div className="p-16 bg-white text-black font-sans h-full flex flex-col justify-between">
             <div>
@@ -390,82 +487,104 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
          </div>
       </div>
 
-      {/* Main Header */}
-      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-6 ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-6 border-b pb-6 ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
         <div>
-          <button onClick={onReset} className={`text-sm flex items-center mb-3 transition-colors font-medium ${isDarkMode ? 'text-gray-400 hover:text-verde-light' : 'text-gray-500 hover:text-emerald-600'}`}>
+          <button onClick={onReset} className={`text-sm flex items-center mb-3 transition-all active:scale-95 font-medium ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-emerald-700'}`}>
             <ArrowLeft className="w-4 h-4 mr-1" /> Nova Análise
           </button>
           <div className="flex flex-col xl:flex-row xl:items-center gap-4">
-            <h2 className={`text-2xl md:text-3xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Dashboard de Conexões</h2>
+            <h2 className={`text-2xl md:text-3xl font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Dashboard IN</h2>
             <div className="flex flex-wrap gap-2">
-              <button onClick={handleExportPPTX} disabled={isExportingPPTX} className={`flex items-center gap-2 px-3 py-2 text-xs font-bold rounded-lg border shadow-sm transition-all hover:-translate-y-0.5 ${isDarkMode ? 'bg-chumbo-800 border-gray-700 text-orange-400 hover:bg-chumbo-900' : 'bg-white border-gray-200 text-orange-700 hover:bg-gray-50'}`}>
+              <button onClick={handleExportPPTX} disabled={isExportingPPTX} className={`flex items-center gap-2 px-3 py-2 text-[10px] font-black uppercase rounded-lg border shadow-sm transition-all active:scale-95 ${isDarkMode ? 'bg-chumbo-800 border-gray-700 text-orange-400' : 'bg-white border-gray-200 text-orange-700'}`}>
                 {isExportingPPTX ? <div className="animate-spin h-3 w-3 border-b-2 border-current rounded-full" /> : <Presentation className="w-3 h-3" />}
                 PPTX
               </button>
-              <button onClick={handleExportPDF} disabled={isExportingPDF} className={`flex items-center gap-2 px-3 py-2 text-xs font-bold rounded-lg border shadow-sm transition-all hover:-translate-y-0.5 ${isDarkMode ? 'bg-chumbo-800 border-gray-700 text-blue-400 hover:bg-chumbo-900' : 'bg-white border-gray-200 text-blue-700 hover:bg-gray-50'}`}>
+              <button onClick={handleExportPDF} disabled={isExportingPDF} className={`flex items-center gap-2 px-3 py-2 text-[10px] font-black uppercase rounded-lg border shadow-sm transition-all active:scale-95 ${isDarkMode ? 'bg-chumbo-800 border-gray-700 text-blue-400' : 'bg-white border-gray-200 text-blue-700'}`}>
                 {isExportingPDF ? <div className="animate-spin h-3 w-3 border-b-2 border-current rounded-full" /> : <FileText className="w-3 h-3" />}
                 PDF
               </button>
-              <button onClick={handleExportXLSX} className={`flex items-center gap-2 px-3 py-2 text-xs font-bold rounded-lg border shadow-sm transition-all hover:-translate-y-0.5 ${isDarkMode ? 'bg-chumbo-800 border-gray-700 text-emerald-400 hover:bg-chumbo-900' : 'bg-white border-gray-200 text-emerald-700 hover:bg-gray-50'}`}>
+              <button onClick={handleExportXLSX} className={`flex items-center gap-2 px-3 py-2 text-[10px] font-black uppercase rounded-lg border shadow-sm transition-all active:scale-95 ${isDarkMode ? 'bg-chumbo-800 border-gray-700 text-emerald-400' : 'bg-white border-gray-200 text-emerald-700'}`}>
                 <FileSpreadsheet className="w-3 h-3" /> EXCEL
               </button>
             </div>
           </div>
-          <p className={`text-sm md:text-base mt-2 max-w-4xl leading-relaxed ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{data.summary}</p>
+          <p className={`text-xs md:text-sm mt-3 max-w-4xl leading-relaxed font-medium opacity-80 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{data.summary}</p>
         </div>
         
-        <div className={`flex p-1.5 rounded-xl self-start md:self-center overflow-x-auto max-w-full ${isDarkMode ? 'bg-gray-800/50' : 'bg-gray-100'}`}>
+        <div className={`flex p-1 rounded-2xl self-start md:self-center overflow-x-auto max-w-full no-scrollbar shadow-inner ${isDarkMode ? 'bg-gray-800/50' : 'bg-gray-100'}`}>
           {(['overview', 'matches', 'list', 'room'] as const).map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 md:px-5 py-2 md:py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all whitespace-nowrap ${activeTab === tab ? (isDarkMode ? 'bg-chumbo-900 text-verde-light shadow-md' : 'bg-white text-emerald-600 shadow-sm') : (isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700')}`}>
-              {tab === 'overview' && 'Visão Geral'}
-              {tab === 'matches' && 'Top Conexões'}
-              {tab === 'list' && 'Lista Completa'}
-              {tab === 'room' && 'Mapa de Sala'}
+            <button 
+              key={tab} 
+              onClick={() => setActiveTab(tab)} 
+              className={`px-4 md:px-6 py-2 md:py-3 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab ? (isDarkMode ? 'bg-chumbo-900 text-verde-light shadow-lg' : 'bg-white text-emerald-700 shadow-md ring-1 ring-black/5') : (isDarkMode ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-700')}`}
+            >
+              {tab === 'overview' && 'Dashboard'}
+              {tab === 'matches' && 'Conexões'}
+              {tab === 'list' && 'Participantes'}
+              {tab === 'room' && 'Sala'}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="min-h-[500px]">
+      <div className="min-h-[400px]">
         {activeTab === 'overview' && (
-          <div className="space-y-6 animate-fade-in">
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-               <MetricCard title="Índice Geral (IN)" value={`${data.overallScore}%`} icon={TrendingUp} isDarkMode={isDarkMode} accentColor="bg-emerald-500" trend={{ isPositive: data.overallScore >= 75, text: data.overallScore >= 75 ? 'Alto Potencial' : 'Regular' }} />
-               <MetricCard title="Participantes" value={data.participants.length} icon={Users} isDarkMode={isDarkMode} accentColor="bg-blue-500" />
-               <MetricCard title="Conexões Chave" value={allMatches.filter(m => m.score >= 80).length} icon={Link} isDarkMode={isDarkMode} accentColor="bg-purple-500" />
-               <MetricCard title="Formato Ideal" value={formatLayoutName(currentLayout)} icon={LayoutTemplate} isDarkMode={isDarkMode} accentColor="bg-orange-500" />
+          <div className="space-y-6 md:space-y-10 animate-fade-in">
+             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
+               <div className="col-span-1 sm:col-span-1"><MetricCard title="IN Geral" value={`${data.overallScore}%`} icon={TrendingUp} isDarkMode={isDarkMode} accentColor="bg-emerald-500" trend={{ isPositive: data.overallScore >= 75, text: data.overallScore >= 75 ? 'Excelente' : 'Bom' }} /></div>
+               <div className="col-span-1 sm:col-span-1"><MetricCard title="Total" value={data.participants.length} icon={Users} isDarkMode={isDarkMode} accentColor="bg-blue-500" /></div>
+               <div className="col-span-1 sm:col-span-1"><MetricCard title="Matches 80+" value={allMatches.filter(m => m.score >= 80).length} icon={Link} isDarkMode={isDarkMode} accentColor="bg-purple-500" /></div>
+               <div className="col-span-1 sm:col-span-1"><MetricCard title="Média Colab." value={employeeStats.avgEmployees} icon={UserPlus} isDarkMode={isDarkMode} accentColor="bg-amber-500" /></div>
+               <div className="col-span-2 lg:col-span-1"><MetricCard title="Layout Ideal" value={formatLayoutName(currentLayout)} icon={LayoutTemplate} isDarkMode={isDarkMode} accentColor="bg-orange-500" /></div>
              </div>
 
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-               <div className={`p-6 rounded-2xl border shadow-lg ${isDarkMode ? 'bg-chumbo-900 border-gray-800' : 'bg-white border-gray-100'}`}>
-                  <h3 className="text-xl font-bold mb-6">Top 10 Potencial Individual</h3>
-                  <div className="h-[350px]">
+             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+               <div className={`p-5 md:p-8 rounded-3xl border shadow-xl ${isDarkMode ? 'bg-chumbo-900 border-gray-800' : 'bg-white border-gray-100'}`}>
+                  <h3 className="text-base md:text-xl font-black mb-6 flex items-center gap-2 uppercase tracking-tighter"><Crown className="w-5 h-5 text-amber-500" /> Top 10 Índice Individual</h3>
+                  <div className="h-[300px] md:h-[350px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={sortedIndividuals} layout="vertical" margin={{ left: 20, right: 30 }}>
+                      <BarChart data={sortedIndividuals} layout="vertical" margin={{ left: 10, right: 30 }}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke={isDarkMode ? '#374151' : '#E5E7EB'} />
                         <XAxis type="number" domain={[0, 100]} hide />
-                        <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11, fill: isDarkMode ? '#D1D5DB' : '#4B5563' }} axisLine={false} tickLine={false} />
+                        <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 10, fontWeight: 'bold', fill: isDarkMode ? '#9CA3AF' : '#4B5563' }} axisLine={false} tickLine={false} />
                         <Tooltip content={<CustomTooltip isDarkMode={isDarkMode} />} />
-                        <Bar dataKey="score" radius={[0, 4, 4, 0]} barSize={20}>
+                        <Bar dataKey="score" radius={[0, 10, 10, 0]} barSize={16}>
                           {sortedIndividuals.map((entry, idx) => <Cell key={idx} fill={entry.score > 85 ? '#059669' : '#10B981'} />)}
-                          <LabelList dataKey="score" position="right" formatter={(v: any) => `${v}%`} fontSize={10} fill={isDarkMode ? '#9CA3AF' : '#6B7280'} />
+                          <LabelList dataKey="score" position="right" formatter={(v: any) => `${v}%`} fontSize={10} fontWeight="bold" fill={isDarkMode ? '#9CA3AF' : '#6B7280'} />
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                </div>
 
-               <div className={`p-6 rounded-2xl border shadow-lg ${isDarkMode ? 'bg-chumbo-900 border-gray-800' : 'bg-white border-gray-100'}`}>
-                  <h3 className="text-xl font-bold mb-6">Distribuição Setorial</h3>
-                  <div className="grid grid-cols-2 gap-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+               <div className={`p-5 md:p-8 rounded-3xl border shadow-xl ${isDarkMode ? 'bg-chumbo-900 border-gray-800' : 'bg-white border-gray-100'}`}>
+                  <h3 className="text-base md:text-xl font-black mb-6 flex items-center gap-2 uppercase tracking-tighter"><Building2 className="w-5 h-5 text-blue-500" /> Top 10 Empresas (Colab.)</h3>
+                  <div className="h-[300px] md:h-[350px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={employeeStats.top10Companies} layout="vertical" margin={{ left: 10, right: 30 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke={isDarkMode ? '#374151' : '#E5E7EB'} />
+                        <XAxis type="number" hide />
+                        <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 10, fontWeight: 'bold', fill: isDarkMode ? '#9CA3AF' : '#4B5563' }} axisLine={false} tickLine={false} />
+                        <Tooltip content={<CustomTooltip isDarkMode={isDarkMode} suffix=" colab." />} />
+                        <Bar dataKey="count" radius={[0, 10, 10, 0]} barSize={16}>
+                          {employeeStats.top10Companies.map((entry, idx) => <Cell key={idx} fill="#3b82f6" />)}
+                          <LabelList dataKey="count" position="right" fontSize={10} fontWeight="bold" fill={isDarkMode ? '#9CA3AF' : '#6B7280'} />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+               </div>
+
+               <div className={`p-5 md:p-8 rounded-3xl border shadow-xl ${isDarkMode ? 'bg-chumbo-900 border-gray-800' : 'bg-white border-gray-100'}`}>
+                  <h3 className="text-base md:text-xl font-black mb-6 flex items-center gap-2 uppercase tracking-tighter"><Layers className="w-5 h-5 text-purple-500" /> Distribuição Setorial</h3>
+                  <div className="grid grid-cols-2 gap-3 max-h-[300px] md:max-h-[350px] overflow-y-auto pr-2 custom-scrollbar no-scrollbar">
                     {sortedSegments.map((s, idx) => (
-                      <div key={idx} className={`p-4 rounded-xl border flex flex-col justify-between h-28 ${isDarkMode ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+                      <div key={idx} className={`p-4 rounded-2xl border flex flex-col justify-between h-24 md:h-28 transition-all hover:border-purple-300 ${isDarkMode ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
                         <div className="flex justify-between items-start">
-                          <span className="text-2xl font-bold">{s.value}</span>
-                          <span className="text-[10px] font-bold opacity-50">{Math.round((s.value/data.participants.length)*100)}%</span>
+                          <span className="text-lg md:text-2xl font-black">{s.value}</span>
+                          <span className="text-[10px] font-black opacity-30">{Math.round((s.value/data.participants.length)*100)}%</span>
                         </div>
-                        <p className="text-[11px] font-medium leading-tight line-clamp-2">{s.name}</p>
+                        <p className="text-[10px] md:text-[11px] font-black uppercase tracking-tight leading-tight line-clamp-2 opacity-70">{s.name}</p>
                       </div>
                     ))}
                   </div>
@@ -478,21 +597,25 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
           <div className="space-y-4 animate-fade-in">
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {topMatchesVisible.map(match => (
-                  <div key={match.id} className={`p-5 rounded-xl border flex items-start gap-4 hover:shadow-md transition-all ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-                    <div className={`text-2xl font-bold w-16 text-center shrink-0 ${match.score >= 90 ? 'text-emerald-500' : 'text-gray-400'}`}>{match.score}%</div>
+                  <div 
+                    key={match.id} 
+                    onClick={() => setSelectedMatch(match)}
+                    className={`p-5 rounded-2xl border flex items-start gap-4 hover:shadow-2xl hover:scale-[1.01] hover:-translate-y-1 cursor-pointer transition-all duration-300 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200 shadow-sm'}`}
+                  >
+                    <div className={`text-xl md:text-2xl font-black w-16 text-center shrink-0 py-3 rounded-xl ${match.score >= 90 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-gray-500/10 text-gray-400'}`}>{match.score}%</div>
                     <div className="flex-1 min-w-0">
-                       <div className="flex flex-col md:flex-row md:items-center gap-2 mb-3 font-bold text-sm">
+                       <div className="flex flex-col md:flex-row md:items-center gap-2 mb-3 font-black text-xs md:text-sm">
                           <div className="flex-1 min-w-0">
-                             <div className="truncate text-base">{match.p1.name}</div>
-                             <div className="text-[10px] opacity-60 font-semibold uppercase tracking-wider truncate">{match.p1.company} • {match.p1.employeeCount || 'N/A'} colab. • {match.p1.segment}</div>
+                             <div className="truncate text-sm md:text-base">{match.p1.name}</div>
+                             <div className="text-[10px] opacity-40 font-bold uppercase tracking-wider truncate">{match.p1.company} • {match.p1.segment}</div>
                           </div>
-                          <ArrowRight className="w-3 h-3 opacity-30 shrink-0 hidden md:block" />
+                          <ArrowRight className="w-3 h-3 opacity-20 shrink-0 hidden md:block" />
                           <div className="flex-1 min-w-0 md:text-right">
-                             <div className="truncate text-base">{match.p2.name}</div>
-                             <div className="text-[10px] opacity-60 font-semibold uppercase tracking-wider truncate">{match.p2.company} • {match.p2.employeeCount || 'N/A'} colab. • {match.p2.segment}</div>
+                             <div className="truncate text-sm md:text-base">{match.p2.name}</div>
+                             <div className="text-[10px] opacity-40 font-bold uppercase tracking-wider truncate">{match.p2.company} • {match.p2.segment}</div>
                           </div>
                        </div>
-                       <p className="text-xs italic p-3 rounded-lg bg-gray-50 dark:bg-gray-900/30 text-gray-600 dark:text-gray-400 border border-transparent dark:border-gray-800">
+                       <p className="text-[11px] md:text-xs italic p-3 rounded-xl bg-gray-50 dark:bg-gray-900/30 text-gray-600 dark:text-gray-400 border border-transparent dark:border-gray-800 line-clamp-2">
                          "{match.reason}"
                        </p>
                     </div>
@@ -500,12 +623,12 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
                 ))}
              </div>
              {visibleTopMatches < allMatches.length && (
-                <div className="text-center py-10">
+                <div className="text-center py-12">
                    <button 
                      onClick={() => setVisibleTopMatches(prev => prev + 25)} 
-                     className={`flex items-center gap-2 mx-auto px-8 py-3 rounded-full font-bold text-sm border transition-all ${isDarkMode ? 'bg-gray-800 border-gray-700 text-verde-light hover:bg-gray-700' : 'bg-white border-gray-200 text-emerald-700 hover:bg-gray-50 hover:shadow-md'}`}
+                     className={`flex items-center gap-2 mx-auto px-10 py-3.5 rounded-full font-black text-[10px] md:text-xs uppercase tracking-widest border transition-all active:scale-95 ${isDarkMode ? 'bg-gray-800 border-gray-700 text-verde-light hover:bg-gray-700' : 'bg-white border-gray-200 text-emerald-700 hover:bg-gray-50 hover:shadow-md'}`}
                    >
-                     Ver Mais Conexões <ChevronDown className="w-4 h-4" />
+                     Explorar Mais Conexões <ChevronDown className="w-4 h-4" />
                    </button>
                 </div>
              )}
@@ -514,61 +637,88 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
 
         {activeTab === 'list' && (
           <div className="space-y-4 animate-fade-in">
-             <div className="flex flex-col md:flex-row gap-4 mb-6">
-                <div className={`flex-1 relative rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-                   <Search className="absolute left-3 top-3 w-4 h-4 opacity-40" />
-                   <input type="text" placeholder="Buscar por nome ou empresa..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-transparent outline-none text-sm" />
+             <div className="flex flex-col md:flex-row gap-4 mb-8">
+                <div className={`flex-1 relative rounded-2xl border transition-all focus-within:ring-2 focus-within:ring-emerald-500/50 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+                   <Search className="absolute left-4 top-3.5 w-4 h-4 opacity-30" />
+                   <input 
+                    type="text" 
+                    placeholder="Buscar por nome ou empresa..." 
+                    value={searchTerm} 
+                    onChange={(e) => setSearchTerm(e.target.value)} 
+                    className="w-full pl-12 pr-4 py-3.5 bg-transparent outline-none text-sm font-medium" 
+                   />
                 </div>
-                <select value={filterSegment} onChange={(e) => setFilterSegment(e.target.value)} className={`px-4 py-2 rounded-lg text-sm border font-medium outline-none focus:ring-1 focus:ring-emerald-500 ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200'}`}>
-                    <option value="">Todos os Segmentos</option>
+                <select 
+                  value={filterSegment} 
+                  onChange={(e) => setFilterSegment(e.target.value)} 
+                  className={`px-4 py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest border outline-none transition-all focus:ring-2 focus:ring-emerald-500 ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200 shadow-sm'}`}
+                >
+                    <option value="">Filtrar Segmento</option>
                     {uniqueSegments.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
              </div>
-             <div className="grid grid-cols-1 gap-3">
+             <div className="grid grid-cols-1 gap-4">
                 {fullList.map(score => {
                    const p = participantMap.get(score.participantId);
                    if (!p) return null;
                    const expanded = expandedRows.has(p.id);
                    return (
-                      <div key={p.id} className={`rounded-xl border transition-all ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200 shadow-sm'} ${expanded ? 'ring-2 ring-emerald-500/50' : 'hover:border-emerald-200'}`}>
-                         <div onClick={() => toggleRow(p.id)} className="p-4 cursor-pointer flex items-center gap-4">
-                            <div className={`w-12 h-12 rounded-full flex flex-col items-center justify-center text-xs font-bold shrink-0 ${p.isHost ? 'bg-amber-400 text-white shadow-md' : 'bg-emerald-100 text-emerald-700'}`}>
-                               <span className="text-lg">{score.score}</span>
-                               <span className="text-[7px] uppercase tracking-tighter">Índice IN</span>
+                      <div 
+                        key={p.id} 
+                        className={`rounded-3xl border transition-all duration-300 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200 shadow-sm'} ${expanded ? 'ring-2 ring-emerald-500/50 scale-[1.01]' : 'hover:border-emerald-200'}`}
+                      >
+                         <div onClick={() => toggleRow(p.id)} className="p-5 cursor-pointer flex items-center gap-4">
+                            <div className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center text-[10px] font-black shrink-0 shadow-lg ${p.isHost ? 'bg-amber-400 text-white' : 'bg-emerald-100 text-emerald-700'}`}>
+                               <span className="text-xl leading-none">{score.score}</span>
+                               <span className="text-[7px] uppercase tracking-tighter opacity-70">Índice IN</span>
                             </div>
                             <div className="flex-1 min-w-0">
-                               <h4 className="font-bold truncate text-sm flex items-center gap-2">
+                               <h4 className="font-black truncate text-sm md:text-base flex items-center gap-2">
                                  {p.name} {p.isHost && <Crown className="w-3 h-3 text-amber-500" />}
                                </h4>
-                               <p className="text-xs opacity-60 truncate">{p.company} • {p.employeeCount ? `${p.employeeCount} colab.` : 'N/A colab.'} • {p.segment}</p>
+                               <p className="text-[10px] md:text-xs font-bold opacity-40 uppercase tracking-wider truncate">{p.company} • {p.employeeCount ? `${p.employeeCount} colab.` : 'N/A'} • {p.segment}</p>
                             </div>
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-4 shrink-0">
                                <div className="text-right hidden sm:block">
-                                  <div className="text-[10px] font-bold uppercase opacity-40">Conexões</div>
-                                  <div className="text-sm font-bold">{score.recommendedConnections?.length || 0}</div>
+                                  <div className="text-[10px] font-black uppercase opacity-20 tracking-widest">Conexões</div>
+                                  <div className="text-sm font-black text-emerald-600">{score.recommendedConnections?.length || 0}</div>
                                </div>
-                               <ChevronRight className={`w-5 h-5 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+                               <ChevronRight className={`w-6 h-6 transition-transform duration-300 ${expanded ? 'rotate-90' : 'opacity-20'}`} />
                             </div>
                          </div>
                          {expanded && (
-                           <div className="border-t p-5 bg-gray-50/50 dark:bg-gray-900/20 space-y-4">
+                           <div className="border-t p-6 md:p-8 bg-gray-50/50 dark:bg-gray-900/20 space-y-5 animate-fade-in">
                              <div className="flex items-center justify-between">
-                                <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Matriz de Sinergia Sugerida</p>
-                                <span className="text-[10px] opacity-40 italic">Análise de IA Otimizada</span>
+                                <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Principais Oportunidades de Valor</p>
+                                <span className="text-[10px] opacity-20 font-bold italic">Análise de IA Multidimensional</span>
                              </div>
-                             {score.recommendedConnections?.map((rec, i) => (
-                               <div key={i} className="text-xs p-4 rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-800 flex justify-between gap-6 shadow-sm">
-                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className="font-bold block text-sm">{participantMap.get(rec.partnerId)?.name}</span>
-                                      <span className="text-[10px] opacity-40 font-normal">({participantMap.get(rec.partnerId)?.company})</span>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {score.recommendedConnections?.map((rec, i) => (
+                                  <div 
+                                    key={i} 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedMatch({
+                                        p1: p,
+                                        p2: participantMap.get(rec.partnerId),
+                                        score: rec.score,
+                                        reason: rec.reason,
+                                        id: `${p.id}-${rec.partnerId}`
+                                      });
+                                    }}
+                                    className="text-xs p-5 rounded-2xl border dark:border-gray-700 bg-white dark:bg-gray-800 flex justify-between gap-4 shadow-sm cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md"
+                                  >
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <span className="font-black block text-sm truncate">{participantMap.get(rec.partnerId)?.name}</span>
+                                        </div>
+                                        <span className="opacity-70 italic leading-relaxed text-[11px] line-clamp-3">"{rec.reason}"</span>
                                     </div>
-                                    <span className="opacity-70 italic leading-relaxed">"{rec.reason}"</span>
-                                 </div>
-                                 <div className="text-emerald-600 font-bold self-center text-sm px-2 py-1 bg-emerald-50 rounded-lg">{rec.score}%</div>
-                               </div>
-                             ))}
-                             {!score.recommendedConnections?.length && <p className="text-xs opacity-50 italic text-center py-2">Sem recomendações específicas para este perfil.</p>}
+                                    <div className="text-emerald-600 font-black self-center text-sm px-3 py-1.5 bg-emerald-50 rounded-xl shadow-sm">{rec.score}%</div>
+                                  </div>
+                                ))}
+                             </div>
+                             {!score.recommendedConnections?.length && <p className="text-xs opacity-50 italic text-center py-4">Sem recomendações específicas para este perfil.</p>}
                            </div>
                          )}
                       </div>

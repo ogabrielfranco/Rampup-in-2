@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Upload, Play, Database, CheckCircle, UserCircle, Users, Calendar, Clock, FileText } from 'lucide-react';
+import { Upload, Play, Database, CheckCircle, UserCircle, Users, Calendar, Clock, FileText, RefreshCw } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface HostInputViewProps {
@@ -9,31 +10,38 @@ interface HostInputViewProps {
   onBack: () => void;
 }
 
-const DEMO_HOST = `Host 1: Luiza Trajano, Magalu, Varejo e E-commerce
-Host 2: Caito Maia, Chilli Beans, Ótica, Franquias e Moda`;
+const NAMES = ["Luiza", "Caito", "André", "Guilherme", "Cristina", "Jorge", "Abílio", "Luiz", "Eduardo", "Paula", "Fábio", "Marta", "Roberto", "Carla"];
+const SURNAMES = ["Trajano", "Maia", "Esteves", "Benchimol", "Junqueira", "Lemman", "Diniz", "Seabra", "Saverin", "Mendes", "Almeida", "Santos"];
+const SEGMENTS = ["Varejo", "E-commerce", "Franquias", "Investimentos", "Bancos", "Cosméticos", "Imobiliário", "Educação", "Tech", "Agronegócio"];
+const COMPANIES_SUFFIX = ["Group", "Holding", "Corporation", "Investimentos", "Global", "Systems", "Network"];
 
-const DEMO_PARTICIPANTS = `1. João Silva, Construtora Silva, Construção Civil
-2. Maria Souza, Souza Transportes, Logística
-3. Carlos Pereira, TechDev Solutions, Desenvolvimento de Software
-4. Ana Oliveira, Oliveira Doces Finos, Confeitaria e Buffet
-5. Pedro Santos, Santos Engenharia, Engenharia Civil
-6. Lucia Costa, Costa Contabilidade, Contabilidade
-7. Marcos Lima, Lima Shop, E-commerce de Eletrônicos
-8. Fernanda Rocha, Rocha & Associados, Jurídico Trabalhista
-9. Roberto Almeida, Almeida Seguros, Corretora de Seguros
-10. Juliana Dias, Finanças 360, Consultoria Financeira
-11. Eduardo Mello, Mello Ads, Gestão de Tráfego Pago
-12. Sofia Nunes, Nunes Odonto, Clínica Odontológica
-13. Rafael Torres, Torres Fitness, Academia
-14. Beatriz Gomes, Studio Bea, Arquitetura e Interiores
-15. Lucas Martins, Martins Log, Logística e Transporte
-16. Gabriela Ferreira, Gabi Modas, Varejo de Moda Feminina
-17. Felipe Barbosa, Barbosa Tech, Suporte de TI
-18. Renata Carvalho, Carvalho Eventos, Cerimonialista
-19. Thiago Rodrigues, Rodrigues Solar, Energia Solar
-20. Camila Alves, NutriVida, Nutrição Clínica
-21. Bruno Cardoso, Cardoso Automação, Automação Residencial
-22. Vanessa Lima, Estética Vanessa, Clínica de Estética`;
+function generateRandomHostData(): string {
+  const hostCount = Math.floor(Math.random() * 2) + 1;
+  let data = "";
+  for (let i = 1; i <= hostCount; i++) {
+    const name = `${NAMES[Math.floor(Math.random() * NAMES.length)]} ${SURNAMES[Math.floor(Math.random() * SURNAMES.length)]}`;
+    const segment = SEGMENTS[Math.floor(Math.random() * SEGMENTS.length)];
+    const company = `${SURNAMES[Math.floor(Math.random() * SURNAMES.length)]} ${COMPANIES_SUFFIX[Math.floor(Math.random() * COMPANIES_SUFFIX.length)]}`;
+    const employees = Math.floor(Math.random() * 5000) + 100;
+    data += `Host ${i}: ${name}, ${company}, ${segment}, ${employees} colaboradores\n`;
+  }
+  return data;
+}
+
+function generateRandomGuestData(count: number): string {
+  const G_NAMES = ["João", "Maria", "Carlos", "Ana", "Pedro", "Lucia", "Marcos", "Fernanda", "Roberto", "Juliana", "Eduardo", "Sofia", "Rafael", "Beatriz", "Lucas", "Gabriela"];
+  const G_SURNAMES = ["Silva", "Souza", "Pereira", "Oliveira", "Santos", "Costa", "Lima", "Rocha", "Almeida", "Dias", "Mello", "Nunes", "Torres"];
+  const G_SEGMENTS = ["Marketing", "Software", "Eventos", "Construção", "Contabilidade", "TI", "Nutrição", "Automação", "Estética", "Design", "RH", "Turismo"];
+  let data = "";
+  for (let i = 1; i <= count; i++) {
+    const name = `${G_NAMES[Math.floor(Math.random() * G_NAMES.length)]} ${G_SURNAMES[Math.floor(Math.random() * G_SURNAMES.length)]}`;
+    const segment = G_SEGMENTS[Math.floor(Math.random() * G_SEGMENTS.length)];
+    const company = `${G_SURNAMES[Math.floor(Math.random() * G_SURNAMES.length)]} Ventures`;
+    const employees = Math.floor(Math.random() * 50) + 1;
+    data += `${i}. ${name}, ${company}, ${segment}, ${employees} colaboradores\n`;
+  }
+  return data;
+}
 
 const HostInputView: React.FC<HostInputViewProps> = ({ onAnalyze, isLoading, isDarkMode, onBack }) => {
   const [hostsText, setHostsText] = useState('');
@@ -43,11 +51,11 @@ const HostInputView: React.FC<HostInputViewProps> = ({ onAnalyze, isLoading, isD
   const [eventTime, setEventTime] = useState('');
 
   const handleDemo = () => {
-    setEventName('Masterclass de Varejo & Franquias');
+    setEventName('Summit Estratégico de Conexões');
     setEventDate('2025-10-25');
     setEventTime('19:00');
-    setHostsText(DEMO_HOST);
-    setParticipantsText(DEMO_PARTICIPANTS);
+    setHostsText(generateRandomHostData());
+    setParticipantsText(generateRandomGuestData(20));
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,7 +86,6 @@ const HostInputView: React.FC<HostInputViewProps> = ({ onAnalyze, isLoading, isD
   };
 
   const handleAnalyzeClick = () => {
-    // Combine context into the host data string for the AI
     const contextHeader = `CONTEXTO DA AGENDA:
 Evento: ${eventName || 'N/A'}
 Data: ${eventDate || 'N/A'}
@@ -90,11 +97,11 @@ Horário: ${eventTime || 'N/A'}
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto animate-fade-in px-2 md:px-0">
+    <div className="w-full max-w-4xl mx-auto animate-fade-in px-2 md:px-0 mb-10">
       <div className="mb-4 md:mb-6">
         <button 
           onClick={onBack}
-          className={`text-sm font-medium hover:underline flex items-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}
+          className={`text-sm font-medium hover:underline flex items-center transition-all active:scale-95 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}
         >
           &larr; Voltar para seleção
         </button>
@@ -105,7 +112,6 @@ Horário: ${eventTime || 'N/A'}
           ? 'bg-gray-900 border-blue-400/30 shadow-[0_0_25px_rgba(96,165,250,0.1)]' 
           : 'bg-white border-gray-300 shadow-[0_0_30px_rgba(59,130,246,0.1)]'
       }`}>
-        {/* Header Area - Blue Tones for Host Mode */}
         <div className={`p-6 md:p-8 text-center ${
            isDarkMode 
              ? 'bg-gradient-to-br from-blue-900 via-indigo-900 to-gray-900' 
@@ -119,14 +125,13 @@ Horário: ${eventTime || 'N/A'}
           <div className="flex justify-end">
              <button 
                 onClick={handleDemo}
-                className={`text-xs font-medium flex items-center transition-colors px-3 py-1 rounded-full ${isDarkMode ? 'bg-gray-800 text-blue-300 hover:bg-gray-700' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}
+                className={`text-xs font-bold flex items-center transition-all active:scale-95 px-4 py-2 rounded-full shadow-sm ${isDarkMode ? 'bg-gray-800 text-blue-300 hover:bg-gray-700' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}
               >
-                <Database className="w-3 h-3 mr-1.5" />
-                Carregar Exemplo (Luiza Trajano & Caito Maia)
+                <RefreshCw className="w-3 h-3 mr-1.5" />
+                Simular Host Randômico
               </button>
           </div>
 
-          {/* Agenda Details Section */}
           <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
              <h3 className={`text-sm font-bold uppercase mb-4 flex items-center gap-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                 <FileText className="w-4 h-4" /> Detalhes da Agenda
@@ -176,7 +181,6 @@ Horário: ${eventTime || 'N/A'}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-            {/* Input 1: Hosts */}
             <div className="space-y-3">
                <div className="flex items-center gap-2">
                  <UserCircle className={`w-5 h-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`} />
@@ -200,7 +204,6 @@ Horário: ${eventTime || 'N/A'}
                </div>
             </div>
 
-            {/* Input 2: Participants */}
             <div className="space-y-3">
                <div className="flex justify-between items-center">
                  <div className="flex items-center gap-2">
@@ -244,7 +247,6 @@ Horário: ${eventTime || 'N/A'}
             </div>
           </div>
 
-          {/* Action Button */}
           <button
             onClick={handleAnalyzeClick}
             disabled={!hostsText.trim() || !participantsText.trim() || isLoading}
@@ -258,7 +260,7 @@ Horário: ${eventTime || 'N/A'}
           >
             {isLoading ? (
               <>
-                <div className={`animate-spin rounded-full h-5 w-5 border-b-2 mr-3 ${isDarkMode ? 'border-white' : 'border-white'}`}></div>
+                <div className={`animate-spin rounded-full h-5 w-5 border-b-2 mr-3 border-white`}></div>
                 Processando Análise...
               </>
             ) : (
@@ -270,7 +272,6 @@ Horário: ${eventTime || 'N/A'}
           </button>
         </div>
         
-        {/* Footer info */}
         <div className={`px-4 md:px-8 py-4 text-center border-t ${isDarkMode ? 'bg-chumbo-950 border-gray-800 text-gray-600' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
           <div className="flex flex-wrap items-center justify-center gap-2 text-[10px] md:text-xs font-medium">
              <div className="flex items-center"><CheckCircle className="w-3 h-3 mr-1" /> Foco no Host</div>
