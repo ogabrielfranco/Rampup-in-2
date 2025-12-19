@@ -206,7 +206,6 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
   const topMatchesVisible = useMemo(() => allMatches.slice(0, visibleTopMatches), [allMatches, visibleTopMatches]);
 
   const fullList = useMemo(() => {
-    // Ensure every participant is present in the list, even if the individual score wasn't explicitly provided
     let list = data.participants.map(p => {
       const existingScore = data.individualScores.find(s => s.participantId === p.id);
       return {
@@ -720,6 +719,23 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
                    const p = participantMap.get(score.participantId);
                    if (!p) return null;
                    const expanded = expandedRows.has(p.id);
+                   
+                   // New Logic: Show ALL potential connections when expanded
+                   const allPotentialConnections = useMemo(() => {
+                     return data.participants
+                       .filter(otherP => otherP.id !== p.id)
+                       .map(otherP => {
+                         const rec = score.recommendedConnections?.find(r => r.partnerId === otherP.id);
+                         const topM = data.topMatches.find(m => (m.participant1Id === p.id && m.participant2Id === otherP.id) || (m.participant1Id === otherP.id && m.participant2Id === p.id));
+                         return {
+                           partner: otherP,
+                           scoreValue: rec?.score || topM?.score || 0,
+                           reasoning: rec?.reason || topM?.reasoning || 'Oportunidade de networking e troca de experiências de mercado.'
+                         };
+                       })
+                       .sort((a, b) => b.scoreValue - a.scoreValue);
+                   }, [p.id, score.recommendedConnections]);
+
                    return (
                       <div 
                         key={p.id} 
@@ -739,7 +755,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
                             <div className="flex items-center gap-4 shrink-0">
                                <div className="text-right hidden sm:block">
                                   <div className="text-[10px] font-black uppercase opacity-20 tracking-widest">Conexões</div>
-                                  <div className="text-sm font-black text-emerald-600">{score.recommendedConnections?.length || 0}</div>
+                                  <div className="text-sm font-black text-emerald-600">{allPotentialConnections.length}</div>
                                </div>
                                <ChevronRight className={`w-6 h-6 transition-transform duration-300 ${expanded ? 'rotate-90' : 'opacity-20'}`} />
                             </div>
@@ -747,41 +763,41 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
                          {expanded && (
                            <div className="border-t p-6 md:p-8 bg-gray-50/50 dark:bg-gray-900/20 space-y-5 animate-fade-in">
                              <div className="flex items-center justify-between">
-                                <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Principais Oportunidades de Valor</p>
-                                <span className="text-[10px] opacity-20 font-bold italic">Análise de IA Multidimensional</span>
+                                <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Todas as Conexões do Evento ({allPotentialConnections.length})</p>
+                                <span className="text-[10px] opacity-20 font-bold italic">Ordenado por Sinergia</span>
                              </div>
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {score.recommendedConnections?.map((rec, i) => (
+                                {allPotentialConnections.map((conn, i) => (
                                   <div 
                                     key={i} 
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      const partner = participantMap.get(rec.partnerId);
-                                      if (partner) {
-                                          setSelectedMatch({
-                                            p1: p,
-                                            p2: partner,
-                                            score: rec.score,
-                                            reason: rec.reason,
-                                            id: `${p.id}-${rec.partnerId}`
-                                          });
-                                      }
+                                      setSelectedMatch({
+                                        p1: p,
+                                        p2: conn.partner,
+                                        score: conn.scoreValue,
+                                        reason: conn.reasoning,
+                                        id: `${p.id}-${conn.partner.id}`
+                                      });
                                     }}
-                                    className="text-xs p-5 rounded-2xl border dark:border-gray-700 bg-white dark:bg-gray-800 flex justify-between gap-4 shadow-sm cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md"
+                                    className={`text-xs p-5 rounded-2xl border bg-white dark:bg-gray-800 flex justify-between gap-4 shadow-sm cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md ${conn.scoreValue >= 80 ? 'border-emerald-200 dark:border-emerald-900/50 ring-1 ring-emerald-50 dark:ring-emerald-900/10' : 'dark:border-gray-700'}`}
                                   >
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 mb-2">
-                                          <span className="font-black block text-sm truncate">{participantMap.get(rec.partnerId)?.name}</span>
+                                          <span className="font-black block text-sm truncate">{conn.partner.name}</span>
+                                          {conn.scoreValue >= 85 && <Zap className="w-3 h-3 text-emerald-500" />}
                                         </div>
-                                        <span className="opacity-70 italic leading-relaxed text-[11px] line-clamp-3">"{rec.reason}"</span>
+                                        <p className="text-[9px] font-bold opacity-40 uppercase mb-1">{conn.partner.company}</p>
+                                        <span className="opacity-70 italic leading-relaxed text-[11px] line-clamp-2">"{conn.reasoning}"</span>
                                     </div>
-                                    <div className="text-emerald-600 font-black self-center text-sm px-3 py-1.5 bg-emerald-50 rounded-xl shadow-sm">{rec.score}%</div>
+                                    <div className={`font-black self-center text-sm px-3 py-1.5 rounded-xl shadow-sm ${conn.scoreValue >= 80 ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
+                                      {conn.scoreValue}%
+                                    </div>
                                   </div>
                                 ))}
                              </div>
-                             {!score.recommendedConnections?.length && <p className="text-xs opacity-50 italic text-center py-4">Sem recomendações específicas para este perfil.</p>}
                              <div className="p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
-                                <h5 className="text-[10px] font-black uppercase opacity-40 mb-2">Justificativa do Índice</h5>
+                                <h5 className="text-[10px] font-black uppercase opacity-40 mb-2">Perfil Estratégico</h5>
                                 <p className="text-xs italic leading-relaxed opacity-80">"{score.scoreReasoning}"</p>
                              </div>
                            </div>
