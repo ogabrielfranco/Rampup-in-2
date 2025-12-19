@@ -4,7 +4,7 @@ export interface Participant {
   name: string;
   company: string;
   segment: string;
-  employeeCount?: string; // New field for number of employees
+  employeeCount?: string;
   eventName?: string;
   isHost?: boolean;
 }
@@ -12,7 +12,7 @@ export interface Participant {
 export interface ConnectionMatch {
   participant1Id: string;
   participant2Id: string;
-  score: number; // 0-100
+  score: number;
   reasoning: string;
 }
 
@@ -24,23 +24,24 @@ export interface RecommendedConnection {
 
 export interface IndividualScore {
   participantId: string;
-  score: number; // 0-100
-  potentialConnections: number; // Count of high quality connections
-  scoreReasoning?: string; // Short explanation of why this score was assigned
-  recommendedConnections?: RecommendedConnection[]; // List of specific connections for this person
+  score: number;
+  potentialConnections: number;
+  scoreReasoning?: string;
+  recommendedConnections?: RecommendedConnection[];
 }
 
 export type LayoutFormat = 'teatro' | 'sala_aula' | 'mesa_o' | 'conferencia' | 'mesa_u' | 'mesa_t' | 'recepcao' | 'buffet' | 'custom';
 
 export interface AnalysisResult {
-  overallScore: number; // 0-100
+  overallScore: number;
   summary: string;
+  averageEmployees: number; // Novo campo
   participants: Participant[];
   individualScores: IndividualScore[];
   topMatches: ConnectionMatch[];
   segmentDistribution: { name: string; value: number }[];
   suggestedLayout: LayoutFormat;
-  seatingGroups: string[][]; // List of lists of participant IDs representing clusters/tables
+  seatingGroups: string[][];
 }
 
 export enum AppView {

@@ -2,21 +2,23 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult } from "../types";
 
-// Initialize Gemini API
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 const modelName = "gemini-3-pro-preview";
 
-// Define the response schema using Type enum
 const analysisSchema = {
   type: Type.OBJECT,
   properties: {
     overallScore: {
       type: Type.NUMBER,
-      description: "O 'Business Index' geral (0-100) calculado pela média ponderada das sinergias.",
+      description: "O 'Business Index' geral (0-100) baseado no potencial de novos negócios do grupo.",
     },
     summary: {
       type: Type.STRING,
-      description: "Um resumo executivo detalhado sobre o potencial de networking (máx 3 frases).",
+      description: "Um resumo executivo analítico focado em oportunidades macro.",
+    },
+    averageEmployees: {
+      type: Type.NUMBER,
+      description: "A média aritmética simples do número de colaboradores dos participantes.",
     },
     participants: {
       type: Type.ARRAY,
@@ -40,7 +42,7 @@ const analysisSchema = {
         type: Type.OBJECT,
         properties: {
           participantId: { type: Type.STRING },
-          score: { type: Type.NUMBER, description: "Score individual calculado: (Sinergia*0.4 + Alinhamento*0.3 + Escala*0.2 + Diversidade*0.1)" },
+          score: { type: Type.NUMBER },
           potentialConnections: { type: Type.NUMBER },
           scoreReasoning: { type: Type.STRING },
           recommendedConnections: {
@@ -92,24 +94,25 @@ const analysisSchema = {
       items: { type: Type.ARRAY, items: { type: Type.STRING } }
     }
   },
-  required: ["overallScore", "summary", "participants", "individualScores", "topMatches", "segmentDistribution", "suggestedLayout", "seatingGroups"],
+  required: ["overallScore", "summary", "averageEmployees", "participants", "individualScores", "topMatches", "segmentDistribution", "suggestedLayout", "seatingGroups"],
 };
 
 export const analyzeNetworkingData = async (rawData: string): Promise<AnalysisResult> => {
   const prompt = `
-    Você é um Estrategista de Conexões de Negócios de Alta Performance.
+    Você é um Mestre em Matchmaking de Negócios e Estrategista de Networking.
     
-    **MISSÃO:** Calcular o "Rampup IN" (Índice de Negócio) usando o seguinte ALGORITMO PONDERADO:
-    1. **Sinergia Setorial (40%):** Potencial de transação direta ou complementaridade entre setores (ex: TI -> Varejo).
-    2. **Alinhamento Estratégico (30%):** Quão bem o perfil do participante atende aos objetivos descritos no contexto do evento.
-    3. **Escala e Maturidade (20%):** Impacto baseado no número de colaboradores. Empresas maiores ganham peso em 'Capacidade de Compra', menores em 'Agilidade e Inovação'.
-    4. **Diversidade de Rede (10%):** Capacidade do participante de trazer novas perspectivas para o grupo.
+    **ALGORITMO DE CONEXÃO AVANÇADO:**
+    1. **Complementaridade de Cadeia (50%):** Analise se uma empresa fornece o que a outra precisa (ex: Software de Logística -> Transportadora).
+    2. **Poder de Decisão e Escala (25%):** Use o número de colaboradores como proxy para maturidade e volume de compra/venda.
+    3. **Sinergia Setorial Latente (15%):** Conexões entre setores que compartilham o mesmo ICP (cliente ideal).
+    4. **Inovação Cruzada (10%):** Conectar empresas disruptivas com tradicionais para troca de know-how.
 
-    **REQUISITO DE ANÁLISE:**
-    - Identifique padrões ocultos (ex: muitos empresários de logística em um evento de e-commerce aumenta o IN geral).
-    - As justificativas de match devem citar "Otimização de Cadeia", "Sinergia Tecnológica" ou "Escalabilidade Operacional".
+    **TAREFA:**
+    - Calcule a média de colaboradores (averageEmployees).
+    - Gere conexões detalhadas para CADA participante.
+    - O Score de Match deve ser rigoroso: >90 apenas para parcerias 'perfeitas'.
 
-    Dados do Evento e Participantes:
+    DADOS:
     ${rawData}
   `;
   return callGemini(prompt);
@@ -117,17 +120,17 @@ export const analyzeNetworkingData = async (rawData: string): Promise<AnalysisRe
 
 export const analyzeHostPotential = async (hostsData: string, participantsData: string): Promise<AnalysisResult> => {
     const prompt = `
-      Você é um Especialista em Matchmaking focado em ROI para o HOST.
+      Estrategista de ROI de Eventos focado no HOST.
   
       **ALGORITMO DO HOST:**
-      1. **ICP Match (50%):** O convidado é um cliente ideal para o Host? (Considere tamanho da empresa e setor).
-      2. **Parceria Estratégica (30%):** O convidado oferece serviços que o Host não tem, permitindo cross-selling?
-      3. **Autoridade e Escala (20%):** O convidado é um decisor de uma empresa de grande porte (>100 colab)?
+      1. **ICP Match (60%):** Nível de aderência do convidado ao produto/serviço do Host.
+      2. **Cross-Selling / Upselling (25%):** Potencial de parceria para expandir mercado.
+      3. **Qualificação de Leads (15%):** Baseado em porte (colaboradores) e relevância no setor.
   
-      Calcule o IN baseado exclusivamente no valor gerado PARA O ANFITRIÃO.
+      Calcule a média de colaboradores de todos os convidados.
   
       HOST: ${hostsData}
-      GUESTS: ${participantsData}
+      CONVIDADOS: ${participantsData}
     `;
     return callGemini(prompt);
 };
@@ -140,7 +143,7 @@ const callGemini = async (prompt: string): Promise<AnalysisResult> => {
           config: {
             responseMimeType: "application/json",
             responseSchema: analysisSchema,
-            temperature: 0.1, // Lower temperature for more consistent calculations
+            temperature: 0.1,
             thinkingConfig: { thinkingBudget: 4096 }
           },
         });
@@ -151,4 +154,4 @@ const callGemini = async (prompt: string): Promise<AnalysisResult> => {
         console.error("Erro na análise:", error);
         throw new Error("Falha ao analisar os dados de networking.");
       }
-}
+};
