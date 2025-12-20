@@ -2,7 +2,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 const modelName = "gemini-3-pro-preview";
 
 const analysisSchema = {
@@ -147,7 +146,7 @@ export const analyzeNetworkingData = async (rawData: string): Promise<AnalysisRe
 
 export const analyzeHostPotential = async (hostsData: string, participantsData: string): Promise<AnalysisResult> => {
     const prompt = `
-      📑 MEGA PROMPT SUPREMO: ANÁLISE DE ECOSSISTEMA COM FOCO NO HOST
+      📑 MEGA PROMPT SUPREMO: ANÁLISE DE ECOSSISTEMAS COM FOCO NO HOST
 
       Utilize a lógica matemática de Grafos e a equação IN = (E * 0.50) + (P * 0.30) + (D * 0.20) para mapear o valor de cada convidado em relação ao Host e ao ecossistema total.
       
@@ -164,22 +163,24 @@ export const analyzeHostPotential = async (hostsData: string, participantsData: 
 
 const callGemini = async (prompt: string): Promise<AnalysisResult> => {
     try {
-        const aiInstance = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const response = await aiInstance.models.generateContent({
+        // Initialize the client using process.env.API_KEY directly.
+        // Assume API_KEY is pre-configured and accessible.
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const response = await ai.models.generateContent({
           model: modelName,
           contents: prompt,
           config: {
             responseMimeType: "application/json",
             responseSchema: analysisSchema,
             temperature: 0.1,
-            thinkingConfig: { thinkingBudget: 4096 }
           },
         });
+        
         const jsonText = response.text;
-        if (!jsonText) throw new Error("Sem resposta da IA");
+        if (!jsonText) throw new Error("A IA retornou uma resposta vazia.");
         return JSON.parse(jsonText) as AnalysisResult;
       } catch (error) {
-        console.error("Erro na análise estratégica:", error);
-        throw new Error("Erro ao processar inteligência estratégica.");
+        console.error("Erro na API do Gemini:", error);
+        throw error;
       }
 };
