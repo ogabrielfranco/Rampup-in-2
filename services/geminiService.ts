@@ -2,24 +2,15 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult } from "../types";
 
-// gemini-3-flash-preview é o modelo ideal para a camada gratuita e excelente para JSON
+// Modelo ideal para a camada gratuita: ultra-rápido e preciso em JSON
 const MODEL_NAME = "gemini-3-flash-preview";
 
 const analysisSchema = {
   type: Type.OBJECT,
   properties: {
-    overallScore: {
-      type: Type.NUMBER,
-      description: "Índice de Negócio geral do grupo (0-100).",
-    },
-    summary: {
-      type: Type.STRING,
-      description: "Diagnóstico estratégico curto.",
-    },
-    averageEmployees: {
-      type: Type.NUMBER,
-      description: "Média de colaboradores.",
-    },
+    overallScore: { type: Type.NUMBER },
+    summary: { type: Type.STRING },
+    averageEmployees: { type: Type.NUMBER },
     participants: {
       type: Type.ARRAY,
       items: {
@@ -32,8 +23,8 @@ const analysisSchema = {
           employeeCount: { type: Type.STRING },
           isHost: { type: Type.BOOLEAN }
         },
-        required: ["id", "name", "company", "segment"],
-      },
+        required: ["id", "name", "company"]
+      }
     },
     individualScores: {
       type: Type.ARRAY,
@@ -54,12 +45,12 @@ const analysisSchema = {
                 reason: { type: Type.STRING },
                 synergyType: { type: Type.STRING }
               },
-              required: ["partnerId", "score", "reason"]
+              required: ["partnerId", "score"]
             }
           }
         },
-        required: ["participantId", "score"],
-      },
+        required: ["participantId", "score"]
+      }
     },
     topMatches: {
       type: Type.ARRAY,
@@ -69,53 +60,50 @@ const analysisSchema = {
           participant1Id: { type: Type.STRING },
           participant2Id: { type: Type.STRING },
           score: { type: Type.NUMBER },
-          reasoning: { type: Type.STRING },
-          synergyType: { type: Type.STRING }
+          reasoning: { type: Type.STRING }
         },
-        required: ["participant1Id", "participant2Id", "score"],
-      },
+        required: ["participant1Id", "participant2Id", "score"]
+      }
     },
-    suggestedLayout: {
-      type: Type.STRING,
-    },
+    suggestedLayout: { type: Type.STRING },
     segmentDistribution: {
       type: Type.ARRAY,
       items: {
         type: Type.OBJECT,
         properties: {
           name: { type: Type.STRING },
-          value: { type: Type.NUMBER },
-        },
-        required: ["name", "value"],
-      },
+          value: { type: Type.NUMBER }
+        }
+      }
     },
     seatingGroups: {
       type: Type.ARRAY,
       items: { type: Type.ARRAY, items: { type: Type.STRING } }
     }
   },
-  required: ["overallScore", "summary", "participants", "individualScores", "topMatches"],
+  required: ["overallScore", "summary", "participants", "individualScores", "topMatches"]
 };
 
-const SYSTEM_INSTRUCTION = `Você é o Rampup Intel, especialista em Networking Estratégico. 
-Analise listas de empresários e calcule o Índice de Negócio (IN).
-- Score 0-100.
-- Identifique Sinergias (Compra, Venda, Parceria).
-- Sugira grupos de mesa.
-- Responda APENAS em JSON seguindo o esquema fornecido.`;
+const SYSTEM_PROMPT = `Você é o Rampup Intel. Sua missão é analisar listas de networking empresarial.
+1. Calcule o Índice de Negócio (IN) de 0 a 100 para cada participante.
+2. Identifique sinergias reais (Compra, Venda, Parceria).
+3. Agrupe participantes com alto match em 'seatingGroups'.
+4. Seja conciso no sumário.
+Responda estritamente em JSON.`;
 
-export const analyzeNetworkingData = async (rawData: string): Promise<AnalysisResult> => {
-  return callGemini(`Analise esta lista de networking:\n\n${rawData}`);
+export const analyzeNetworkingData = async (data: string): Promise<AnalysisResult> => {
+  return executeCall(`Analise esta lista de participantes de um evento de networking:\n\n${data}`);
 };
 
-export const analyzeHostPotential = async (hostsData: string, participantsData: string): Promise<AnalysisResult> => {
-  return callGemini(`DADOS DO HOST: ${hostsData}\n\nCONVIDADOS: ${participantsData}\n\nFoque nas conexões para o Host.`);
+export const analyzeHostPotential = async (host: string, guests: string): Promise<AnalysisResult> => {
+  return executeCall(`FOCO NO ANFITRIÃO:\nHOST: ${host}\nCONVIDADOS: ${guests}\nIdentifique as melhores conexões para o Host.`);
 };
 
-async function callGemini(prompt: string): Promise<AnalysisResult> {
+async function executeCall(prompt: string): Promise<AnalysisResult> {
   const apiKey = process.env.API_KEY;
   if (!apiKey) throw new Error("API_KEY_MISSING");
 
+  // Inicialização no momento do uso para capturar a chave mais recente
   const ai = new GoogleGenAI({ apiKey });
   
   try {
@@ -123,28 +111,32 @@ async function callGemini(prompt: string): Promise<AnalysisResult> {
       model: MODEL_NAME,
       contents: [{ parts: [{ text: prompt }] }],
       config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
+        systemInstruction: SYSTEM_PROMPT,
         responseMimeType: "application/json",
         responseSchema: analysisSchema,
         temperature: 0.1,
-      },
+        // Thinking Budget 0 garante velocidade máxima e menor custo de tokens na API gratuita
+        thinkingConfig: { thinkingBudget: 0 }
+      }
     });
 
-    const result = JSON.parse(response.text || "{}");
-    
-    // Normalização básica
+    if (!response.text) throw new Error("EMPTY_RESPONSE");
+    const parsed = JSON.parse(response.text);
+
+    // Normalização defensiva para evitar quebras na UI
     return {
-      ...result,
-      overallScore: result.overallScore || 0,
-      summary: result.summary || "Análise concluída.",
-      participants: result.participants || [],
-      individualScores: result.individualScores || [],
-      topMatches: result.topMatches || [],
-      segmentDistribution: result.segmentDistribution || [],
-      seatingGroups: result.seatingGroups || []
+      overallScore: parsed.overallScore || 0,
+      summary: parsed.summary || "Análise concluída com sucesso.",
+      averageEmployees: parsed.averageEmployees || 0,
+      participants: parsed.participants || [],
+      individualScores: parsed.individualScores || [],
+      topMatches: parsed.topMatches || [],
+      segmentDistribution: parsed.segmentDistribution || [],
+      suggestedLayout: parsed.suggestedLayout || 'buffet',
+      seatingGroups: parsed.seatingGroups || []
     };
-  } catch (error) {
-    console.error("Erro no GeminiService:", error);
-    throw error;
+  } catch (err: any) {
+    console.error("Gemini API Error:", err);
+    throw err;
   }
 }
