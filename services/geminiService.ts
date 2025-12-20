@@ -1,7 +1,8 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult } from "../types";
 
-// gemini-3-flash-preview é o modelo mais estável e rápido para processamento de JSON estruturado
+// gemini-3-flash-preview é o modelo ideal para a camada gratuita e excelente para JSON
 const MODEL_NAME = "gemini-3-flash-preview";
 
 const analysisSchema = {
@@ -9,15 +10,15 @@ const analysisSchema = {
   properties: {
     overallScore: {
       type: Type.NUMBER,
-      description: "Média de 0 a 100 do potencial de negócios do grupo.",
+      description: "Índice de Negócio geral do grupo (0-100).",
     },
     summary: {
       type: Type.STRING,
-      description: "Sumário executivo das oportunidades detectadas.",
+      description: "Diagnóstico estratégico curto.",
     },
     averageEmployees: {
       type: Type.NUMBER,
-      description: "Média estimada de colaboradores das empresas citadas.",
+      description: "Média de colaboradores.",
     },
     participants: {
       type: Type.ARRAY,
@@ -51,10 +52,7 @@ const analysisSchema = {
                 partnerId: { type: Type.STRING },
                 score: { type: Type.NUMBER },
                 reason: { type: Type.STRING },
-                synergyType: { 
-                  type: Type.STRING, 
-                  enum: ['COMPRA', 'VENDA', 'PARCERIA']
-                }
+                synergyType: { type: Type.STRING }
               },
               required: ["partnerId", "score", "reason"]
             }
@@ -72,14 +70,13 @@ const analysisSchema = {
           participant2Id: { type: Type.STRING },
           score: { type: Type.NUMBER },
           reasoning: { type: Type.STRING },
-          synergyType: { type: Type.STRING, enum: ['COMPRA', 'VENDA', 'PARCERIA'] }
+          synergyType: { type: Type.STRING }
         },
         required: ["participant1Id", "participant2Id", "score"],
       },
     },
     suggestedLayout: {
       type: Type.STRING,
-      enum: ['teatro', 'sala_aula', 'mesa_o', 'conferencia', 'mesa_u', 'mesa_t', 'recepcao', 'buffet', 'custom'],
     },
     segmentDistribution: {
       type: Type.ARRAY,
@@ -97,58 +94,30 @@ const analysisSchema = {
       items: { type: Type.ARRAY, items: { type: Type.STRING } }
     }
   },
-  // Mantemos apenas o essencial como obrigatório para evitar falhas de validação rígida
   required: ["overallScore", "summary", "participants", "individualScores", "topMatches"],
 };
 
-const SYSTEM_INSTRUCTION = `Você é o analista de BI da Rampup. Sua tarefa é calcular o "Índice de Negócio" (IN) para participantes de um evento.
-IN Individual (0-100) = (Essencialidade 50% + Indicação 30% + Densidade 20%).
-
-Sinergias:
-- COMPRA: A precisa do que B vende.
-- VENDA: Oposto de compra.
-- PARCERIA: Serviços que se complementam para o mesmo cliente.
-
-Layout: Escolha o melhor formato de sala.
-Mapeamento: Agrupe os matches mais fortes (score > 80) em seatingGroups.
-
-IMPORTANTE:
-- Retorne APENAS o JSON.
-- Se houver Host, priorize as sinergias dele.
-- Garanta que todos os IDs nos scores e matches existam no array de participantes.`;
+const SYSTEM_INSTRUCTION = `Você é o Rampup Intel, especialista em Networking Estratégico. 
+Analise listas de empresários e calcule o Índice de Negócio (IN).
+- Score 0-100.
+- Identifique Sinergias (Compra, Venda, Parceria).
+- Sugira grupos de mesa.
+- Responda APENAS em JSON seguindo o esquema fornecido.`;
 
 export const analyzeNetworkingData = async (rawData: string): Promise<AnalysisResult> => {
-  const prompt = `Analise esta lista de networking e gere o relatório estratégico completo em JSON:\n\n${rawData}`;
-  return callGemini(prompt);
+  return callGemini(`Analise esta lista de networking:\n\n${rawData}`);
 };
 
 export const analyzeHostPotential = async (hostsData: string, participantsData: string): Promise<AnalysisResult> => {
-  const prompt = `
-    FOCO: ANÁLISE DO ANFITRIÃO (HOST)
-    
-    DADOS DO HOST:
-    ${hostsData}
-
-    CONVIDADOS:
-    ${participantsData}
-
-    INSTRUÇÕES: 
-    1. Calcule o IN de cada convidado em relação ao Host.
-    2. No sumário, aponte as 3 maiores oportunidades de faturamento para o Host.
-    3. Inclua o Host no array de participantes com isHost: true.
-  `;
-  return callGemini(prompt);
+  return callGemini(`DADOS DO HOST: ${hostsData}\n\nCONVIDADOS: ${participantsData}\n\nFoque nas conexões para o Host.`);
 };
 
-const callGemini = async (prompt: string): Promise<AnalysisResult> => {
+async function callGemini(prompt: string): Promise<AnalysisResult> {
   const apiKey = process.env.API_KEY;
-  
-  if (!apiKey) {
-    throw new Error("CHAVE_NAO_CONFIGURADA");
-  }
+  if (!apiKey) throw new Error("API_KEY_MISSING");
 
   const ai = new GoogleGenAI({ apiKey });
-
+  
   try {
     const response = await ai.models.generateContent({
       model: MODEL_NAME,
@@ -161,26 +130,21 @@ const callGemini = async (prompt: string): Promise<AnalysisResult> => {
       },
     });
 
-    const text = response.text;
-    if (!text) throw new Error("RESPOSTA_VAZIA");
-
-    const parsed = JSON.parse(text);
-
-    // Normalização para garantir que campos opcionais no schema mas usados na UI existam
+    const result = JSON.parse(response.text || "{}");
+    
+    // Normalização básica
     return {
-      overallScore: parsed.overallScore || 0,
-      summary: parsed.summary || "",
-      averageEmployees: parsed.averageEmployees || 0,
-      participants: parsed.participants || [],
-      individualScores: parsed.individualScores || [],
-      topMatches: parsed.topMatches || [],
-      suggestedLayout: parsed.suggestedLayout || 'teatro',
-      segmentDistribution: parsed.segmentDistribution || [],
-      seatingGroups: parsed.seatingGroups || []
-    } as AnalysisResult;
-
-  } catch (error: any) {
-    console.error("Erro interno GeminiService:", error);
+      ...result,
+      overallScore: result.overallScore || 0,
+      summary: result.summary || "Análise concluída.",
+      participants: result.participants || [],
+      individualScores: result.individualScores || [],
+      topMatches: result.topMatches || [],
+      segmentDistribution: result.segmentDistribution || [],
+      seatingGroups: result.seatingGroups || []
+    };
+  } catch (error) {
+    console.error("Erro no GeminiService:", error);
     throw error;
   }
-};
+}
