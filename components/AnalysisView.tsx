@@ -271,9 +271,9 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
       .slice(0, 10);
   }, [data.participants]);
 
-  const captureElement = async (ref: React.RefObject<HTMLDivElement | null>) => {
-    if (!ref.current) return null;
-    const canvas = await html2canvas(ref.current, {
+  const captureElement = async (element: HTMLDivElement | null) => {
+    if (!element) return null;
+    const canvas = await html2canvas(element, {
       scale: 2,
       backgroundColor: isDarkMode ? '#0a0f1a' : '#ffffff',
       useCORS: true,
@@ -285,8 +285,8 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
   const handleExportPDF = async () => {
     setIsExporting(true);
     try {
-      const mapImg = await captureElement(mapContainerRef);
-      const chartsImg = await captureElement(chartRef);
+      const mapImg = await captureElement(mapContainerRef.current);
+      const chartsImg = await captureElement(chartRef.current);
       const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [297, 167] });
       const primary: [number, number, number] = [5, 150, 105];
       
