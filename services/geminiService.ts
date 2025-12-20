@@ -1,12 +1,8 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult } from "../types";
 
-// Declarar process para o TypeScript não reclamar durante o build
-declare const process: {
-  env: {
-    API_KEY: string;
-  };
-};
+// Tipagem para o ambiente global
+declare const process: any;
 
 const modelName = "gemini-3-pro-preview";
 
@@ -118,31 +114,11 @@ export const analyzeNetworkingData = async (rawData: string): Promise<AnalysisRe
   const prompt = `
     📑 MEGA PROMPT SUPREMO: ENGENHARIA DE ECOSSISTEMAS E INTELIGÊNCIA DE NETWORKING
 
-    ATUAÇÃO:
-    Você é um AI Master em Business Intelligence, Analista de Dados e Engenheiro de Ecossistemas B2B. Sua especialidade é a Teoria dos Grafos aplicada a negócios, identificando fluxos de capital e autoridade dentro de redes fechadas de networking.
-
-    MISSÃO:
-    Analisar a lista de participantes fornecida para extrair o valor máximo de conectividade, calculando um Índice de Negócio (IN) ultra-preciso e mapeando a arquitetura de sinergias do grupo, incluindo o Host como um nó estratégico da rede.
-
-    1. MODELO MATEMÁTICO (ÍNDICE DE NEGÓCIO - IN)
-    Calcule o IN de cada participante em uma escala de 1 a 100, utilizando a seguinte equação ponderada:
-    $$IN = (E \cdot 0.50) + (P \cdot 0.30) + (D \cdot 0.20)$$
-    Onde:
-    - E (Essencialidade - 50%): Grau de necessidade do serviço para a sobrevivência/operação dos outros membros (ex: Jurídico, Contabilidade, TI, RH).
-    - P (Poder de Indicação - 30%): Posição do negócio no "topo do funil" ou início da jornada de compra (ex: Imobiliária que indica reforma, Branding que indica marketing).
-    - D (Densidade de Conexão - 20%): Potencial quantitativo de parcerias transversais detectadas na lista atual.
-
-    2. PROTOCOLO DE ANÁLISE DE ECOSSISTEMA
-    - Mapeamento de Cadeia de Valor: Identifique fornecedor potencial e comprador direto.
-    - Hubs de Sinergia: Agrupe por 'Público-Alvo Compartilhado'.
-    - Pontes de Inovação: Como empresas de Tecnologia/Consultoria podem otimizar as empresas tradicionais.
-    - Análise de Autoridade e Mídia: Conecte detentores de canais a quem possui produto mas baixa visibilidade.
-
-    3. REGRAS CRÍTICAS DE EXECUÇÃO
-    - Regra do Score Alto: É terminantemente PROIBIDO um participante ter IN > 80 sem listar pelo menos 3 conexões recomendadas específicas.
-    - Sinergia Classificada: Cada recomendação DEVE ser marcada como 'COMPRA', 'VENDA' ou 'PARCERIA'.
-    - Visão do Host: O Host deve ser tratado como um nó estratégico.
-    - Mapeamento Total: Nenhum participante pode ficar "isolado"; todos devem ter pelo menos uma sinergia mapeada.
+    Você é um AI Master em Business Intelligence. Analise a lista para calcular o Índice de Negócio (IN) usando:
+    IN = (E * 0.50) + (P * 0.30) + (D * 0.20)
+    
+    Onde E=Essencialidade, P=Poder de Indicação, D=Densidade de Conexão.
+    Identifique sinergias de COMPRA, VENDA e PARCERIA.
 
     DADOS:
     ${rawData}
@@ -152,28 +128,41 @@ export const analyzeNetworkingData = async (rawData: string): Promise<AnalysisRe
 
 export const analyzeHostPotential = async (hostsData: string, participantsData: string): Promise<AnalysisResult> => {
     const prompt = `
-      📑 MEGA PROMPT SUPREMO: ANÁLISE DE ECOSSISTEMAS COM FOCO NO HOST
+      📑 MEGA PROMPT SUPREMO: INTELIGÊNCIA DE NETWORKING FOCADA NO HOST
 
-      Utilize a lógica matemática de Grafos e a equação IN = (E * 0.50) + (P * 0.30) + (D * 0.20) para mapear o valor de cada convidado em relação ao Host e ao ecossistema total.
+      ATUAÇÃO: Você é um Engenheiro de Ecossistemas. Sua missão é analisar a relação estratégica entre o(s) HOST(S) e os CONVIDADOS.
+      
+      OBJETIVO:
+      1. Calcule o Índice de Negócio (IN) para cada convidado focado em sua utilidade para o HOST e para o grupo.
+      2. Mapeie sinergias onde o HOST pode comprar, vender ou fazer parceria com os convidados.
+      3. Identifique conexões valiosas entre os próprios convidados que o HOST pode facilitar (autoridade).
+      
+      MODELO MATEMÁTICO:
+      IN = (Sinergia com Host * 0.60) + (Poder do Convidado * 0.40)
       
       REGRAS:
-      - Classifique sinergias como 'COMPRA', 'VENDA' ou 'PARCERIA'.
-      - Mapeamento Total: Todos os convidados devem ter conexões.
-      - Host é o âncora, mas as sinergias entre convidados também importam.
+      - Inclua os HOSTS e CONVIDADOS na lista final de 'participants'.
+      - Identifique claramente o tipo de sinergia ('COMPRA', 'VENDA', 'PARCERIA').
+      - O 'summary' deve focar em como o HOST pode extrair valor desta agenda específica.
 
-      HOST(S): ${hostsData}
-      CONVIDADOS: ${participantsData}
+      DADOS DO(S) HOST(S):
+      ${hostsData}
+
+      LISTA DE CONVIDADOS:
+      ${participantsData}
     `;
     return callGemini(prompt);
 };
 
 const callGemini = async (prompt: string): Promise<AnalysisResult> => {
     try {
-        const apiKey = process.env.API_KEY;
+        const apiKey = typeof process !== 'undefined' && process.env ? process.env.API_KEY : '';
+        if (!apiKey) throw new Error("API_KEY não configurada no ambiente.");
+
         const ai = new GoogleGenAI({ apiKey });
         const response = await ai.models.generateContent({
           model: modelName,
-          contents: prompt,
+          contents: [{ parts: [{ text: prompt }] }],
           config: {
             responseMimeType: "application/json",
             responseSchema: analysisSchema,
@@ -183,9 +172,16 @@ const callGemini = async (prompt: string): Promise<AnalysisResult> => {
         
         const jsonText = response.text;
         if (!jsonText) throw new Error("A IA retornou uma resposta vazia.");
-        return JSON.parse(jsonText) as AnalysisResult;
+        
+        const result = JSON.parse(jsonText);
+        
+        // Garantir que campos obrigatórios existam mesmo em falhas parciais da IA
+        if (!result.seatingGroups) result.seatingGroups = [];
+        if (!result.topMatches) result.topMatches = [];
+        
+        return result as AnalysisResult;
       } catch (error) {
-        console.error("Erro na API do Gemini:", error);
+        console.error("Erro crítico na chamada Gemini:", error);
         throw error;
       }
 };
