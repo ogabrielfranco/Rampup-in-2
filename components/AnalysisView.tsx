@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useDeferredValue, useRef } from 'react';
 import { AnalysisResult, Participant, IndividualScore } from '../types';
 import SeatingView from './SeatingView';
@@ -7,7 +8,7 @@ import {
 import { 
   ArrowLeft, ArrowRight, FileSpreadsheet, Search, 
   X, Crown, ChevronRight, FileText, Presentation, 
-  Zap, FileDown, Target, Briefcase, TrendingUp, AlertCircle, Users
+  Zap, FileDown, Target, Briefcase, TrendingUp, AlertCircle, Users, ShoppingCart, TrendingDown, Handshake
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -21,12 +22,47 @@ interface AnalysisViewProps {
   isDarkMode: boolean;
 }
 
+const SynergyBadge: React.FC<{ type?: string, isDarkMode: boolean }> = ({ type, isDarkMode }) => {
+  if (!type) return null;
+  
+  const config = {
+    'COMPRA': { 
+      label: 'Compra', 
+      icon: ShoppingCart, 
+      colors: isDarkMode ? 'bg-blue-900/40 text-blue-400 border-blue-800' : 'bg-blue-50 text-blue-600 border-blue-100' 
+    },
+    'VENDA': { 
+      label: 'Venda', 
+      icon: TrendingDown, 
+      colors: isDarkMode ? 'bg-emerald-900/40 text-emerald-400 border-emerald-800' : 'bg-emerald-50 text-emerald-600 border-emerald-100' 
+    },
+    'PARCERIA': { 
+      label: 'Parceria', 
+      icon: Handshake, 
+      colors: isDarkMode ? 'bg-amber-900/40 text-amber-400 border-amber-800' : 'bg-amber-50 text-amber-600 border-amber-100' 
+    }
+  }[type as 'COMPRA' | 'VENDA' | 'PARCERIA'] || { 
+    label: type, 
+    icon: Zap, 
+    colors: isDarkMode ? 'bg-gray-800 text-gray-400 border-gray-700' : 'bg-gray-50 text-gray-500 border-gray-100' 
+  };
+
+  const Icon = config.icon;
+
+  return (
+    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border ${config.colors}`}>
+      <Icon className="w-3 h-3" />
+      {config.label}
+    </div>
+  );
+};
+
 const ParticipantRow: React.FC<{
   item: { p: Participant; score: IndividualScore };
   isExpanded: boolean;
   onToggle: () => void;
   participantMap: Map<string, Participant>;
-  allConnections: { partnerId: string; score: number; reason: string }[];
+  allConnections: { partnerId: string; score: number; reason: string; synergyType?: string }[];
   isDarkMode: boolean;
 }> = ({ item, isExpanded, onToggle, participantMap, allConnections, isDarkMode }) => {
   const hasInbound = allConnections.length > 0;
@@ -79,7 +115,7 @@ const ParticipantRow: React.FC<{
           {!hasInbound ? (
             <div className="text-center py-12">
               <AlertCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Mapeando sinergias exaustivas...</p>
+              <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Identificando sinergias do ecossistema...</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
@@ -96,6 +132,9 @@ const ParticipantRow: React.FC<{
                           {partner.name}
                         </p>
                         <p className="text-[10px] font-bold text-gray-400 truncate uppercase tracking-wider">{partner.company}</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                           <SynergyBadge type={conn.synergyType} isDarkMode={isDarkMode} />
+                        </div>
                       </div>
                       <div className={`px-3 py-1 rounded-xl text-[11px] font-black border shrink-0 ${
                         conn.score >= 80 
@@ -136,15 +175,15 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
     return map;
   }, [data.participants]);
 
-  // Consolidamos as conexões: tanto quem ele indica quanto quem indica ele para garantir visualização total
+  // Consolidamos as conexões: tanto quem ele indica quanto quem indica ele
   const unifiedConnectionsMap = useMemo(() => {
-    const map = new Map<string, { partnerId: string; score: number; reason: string }[]>();
+    const map = new Map<string, { partnerId: string; score: number; reason: string; synergyType?: string }[]>();
     
     // Conexões que o participante sugere (Outbound)
     data.individualScores.forEach(score => {
       const list = map.get(score.participantId) || [];
       score.recommendedConnections?.forEach(conn => {
-        list.push({ partnerId: conn.partnerId, score: conn.score, reason: conn.reason });
+        list.push({ partnerId: conn.partnerId, score: conn.score, reason: conn.reason, synergyType: conn.synergyType });
       });
       map.set(score.participantId, list);
     });
@@ -156,7 +195,17 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
         const list = map.get(targetId) || [];
         // Evita duplicidade se o Gemini já mapeou bidirecional
         if (!list.find(l => l.partnerId === score.participantId)) {
-          list.push({ partnerId: score.participantId, score: conn.score, reason: `Oportunidade Recíproca: ${conn.reason}` });
+          // Quando é inbound, o tipo de sinergia inverte (quem compra vira vendedor para o alvo)
+          let invertedType = conn.synergyType;
+          if (conn.synergyType === 'COMPRA') invertedType = 'VENDA';
+          else if (conn.synergyType === 'VENDA') invertedType = 'COMPRA';
+
+          list.push({ 
+            partnerId: score.participantId, 
+            score: conn.score, 
+            reason: `Oportunidade Recíproca: ${conn.reason}`,
+            synergyType: invertedType
+          });
         }
         map.set(targetId, list);
       });
@@ -170,7 +219,6 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
       const scoreData = data.individualScores.find(s => s.participantId === p.id);
       const unified = unifiedConnectionsMap.get(p.id) || [];
       
-      // Se o score veio zerado mas existem conexões unificadas, fazemos um ajuste de visualização
       let finalScore = scoreData?.score || 0;
       if (finalScore === 0 && unified.length > 0) {
         const topMatchesAvg = unified
@@ -205,7 +253,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
       if (!p1) return;
       score.recommendedConnections?.forEach(rec => {
         const p2 = participantMap.get(rec.partnerId);
-        if (p2) matches.push({ p1, p2, score: rec.score, reason: rec.reason, id: `${p1.id}-${p2.id}` });
+        if (p2) matches.push({ p1, p2, score: rec.score, reason: rec.reason, synergyType: rec.synergyType, id: `${p1.id}-${p2.id}` });
       });
     });
     return matches.sort((a, b) => b.score - a.score);
@@ -375,7 +423,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
                  <div key={match.id} className={`p-7 rounded-[2rem] border shadow-sm hover:shadow-md transition-shadow cursor-pointer group flex flex-col justify-between h-full ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'}`} onClick={() => setSelectedMatch(match)}>
                     <div className="flex justify-between items-center mb-5">
                        <span className={`text-xl font-black px-4 py-1.5 rounded-2xl border ${isDarkMode ? 'text-verde-neon bg-emerald-950/20 border-emerald-900/40' : 'text-emerald-600 bg-emerald-50 border-emerald-100'}`}>{match.score}%</span>
-                       <Zap className="w-5 h-5 text-gray-200 group-hover:text-emerald-300 transition-colors" />
+                       <SynergyBadge type={match.synergyType} isDarkMode={isDarkMode} />
                     </div>
                     <div className="flex items-center gap-4 mb-6">
                        <div className="flex-1 min-w-0">
@@ -388,7 +436,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
                           <p className="text-[10px] font-bold text-gray-400 uppercase truncate tracking-wider">{match.p2.company}</p>
                        </div>
                     </div>
-                    <p className={`text-[12px] italic leading-relaxed line-clamp-3 mt-auto p-4 rounded-2xl font-medium ${isDarkMode ? 'bg-black/20 text-gray-400' : 'bg-gray-50/50 text-gray-500'}`}>"{match.reason}"</p>
+                    <p className={`text-[12px] italic leading-relaxed line-clamp-3 mt-auto p-4 rounded-2xl font-medium ${isDarkMode ? 'bg-black/20 text-gray-400' : 'bg-gray-50/50 text-gray-500'}`}>"{match.reasoning || match.reason}"</p>
                  </div>
               ))}
            </div>
@@ -447,8 +495,11 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
                   </div>
                </div>
                <div className={`p-8 rounded-[2rem] relative ${isDarkMode ? 'bg-black/30' : 'bg-gray-50'}`}>
+                  <div className="absolute -top-4 -left-4">
+                     <SynergyBadge type={selectedMatch.synergyType} isDarkMode={isDarkMode} />
+                  </div>
                   <Zap className="absolute -top-4 -right-4 w-10 h-10 text-emerald-400 opacity-30" />
-                  <p className="text-sm md:text-base italic leading-relaxed font-semibold text-center">"{selectedMatch.reason}"</p>
+                  <p className="text-sm md:text-base italic leading-relaxed font-semibold text-center">"{selectedMatch.reasoning || selectedMatch.reason}"</p>
                </div>
                <button onClick={() => setSelectedMatch(null)} className="w-full mt-10 py-5 bg-emerald-600 text-white font-black rounded-3xl hover:bg-emerald-700 shadow-xl uppercase tracking-[0.2em] text-[12px] md:text-sm">Prosseguir</button>
             </div>

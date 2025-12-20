@@ -14,12 +14,14 @@ export interface ConnectionMatch {
   participant2Id: string;
   score: number;
   reasoning: string;
+  synergyType?: 'COMPRA' | 'VENDA' | 'PARCERIA';
 }
 
 export interface RecommendedConnection {
   partnerId: string;
   score: number;
   reason: string;
+  synergyType?: 'COMPRA' | 'VENDA' | 'PARCERIA';
 }
 
 export interface IndividualScore {
@@ -35,7 +37,7 @@ export type LayoutFormat = 'teatro' | 'sala_aula' | 'mesa_o' | 'conferencia' | '
 export interface AnalysisResult {
   overallScore: number;
   summary: string;
-  averageEmployees: number; // Novo campo
+  averageEmployees: number;
   participants: Participant[];
   individualScores: IndividualScore[];
   topMatches: ConnectionMatch[];
