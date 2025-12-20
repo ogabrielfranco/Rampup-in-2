@@ -6,7 +6,7 @@ import HostInputView from './components/HostInputView';
 import AnalysisView from './components/AnalysisView';
 import { analyzeNetworkingData, analyzeHostPotential } from './services/geminiService';
 import { AnalysisResult, AppView, AppMode } from './types';
-import { Network, Moon, Sun } from 'lucide-react';
+import { Network, Moon, Sun, Key } from 'lucide-react';
 import { LOGO_URL } from './constants';
 
 const LOADING_MESSAGES = [
@@ -18,6 +18,9 @@ const LOADING_MESSAGES = [
   "Otimizando matriz de negócios..."
 ];
 
+// Removed conflicting manual 'declare global' for 'window.aistudio'
+// Relying on the environment's pre-configured global types or safe type assertion.
+
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>(AppView.SELECTION);
   const [appMode, setAppMode] = useState<AppMode>('GENERAL');
@@ -25,6 +28,19 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  const [isKeySelected, setIsKeySelected] = useState(true);
+
+  useEffect(() => {
+    const checkKey = async () => {
+      // Cast to any to access the injected 'aistudio' object without type conflicts.
+      const aistudio = (window as any).aistudio;
+      if (aistudio) {
+        const hasKey = await aistudio.hasSelectedApiKey();
+        setIsKeySelected(hasKey);
+      }
+    };
+    checkKey();
+  }, []);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -54,6 +70,15 @@ const App: React.FC = () => {
     };
   }, [view]);
 
+  const handleSelectKey = async () => {
+    const aistudio = (window as any).aistudio;
+    if (aistudio) {
+      await aistudio.openSelectKey();
+      // Assume the key selection was successful after triggering openSelectKey() as per instructions.
+      setIsKeySelected(true);
+    }
+  };
+
   const handleSelectMode = (mode: AppMode) => {
     setAppMode(mode);
     setView(AppView.INPUT);
@@ -70,7 +95,12 @@ const App: React.FC = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
       console.error(err);
-      setError("Falha ao analisar os dados. Verifique sua conexão e tente novamente.");
+      if (err.message?.includes("Requested entity was not found")) {
+        setIsKeySelected(false);
+        setError("Erro de chave de API. Por favor, selecione a chave novamente.");
+      } else {
+        setError("Falha ao analisar os dados. Verifique sua conexão e tente novamente.");
+      }
       setView(AppView.INPUT);
     }
   };
@@ -85,7 +115,12 @@ const App: React.FC = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
       console.error(err);
-      setError("Falha ao analisar os dados do Host. Tente novamente.");
+      if (err.message?.includes("Requested entity was not found")) {
+        setIsKeySelected(false);
+        setError("Erro de chave de API. Por favor, selecione a chave novamente.");
+      } else {
+        setError("Falha ao analisar os dados do Host. Verifique se os campos estão preenchidos corretamente.");
+      }
       setView(AppView.INPUT);
     }
   };
@@ -121,16 +156,40 @@ const App: React.FC = () => {
             </span>
           </div>
           
-          <button 
-            onClick={() => setIsDarkMode(!isDarkMode)}
-            className={`p-2.5 rounded-full transition-all active:scale-90 ${isDarkMode ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-          >
-            {isDarkMode ? <Sun className="h-4 md:h-5 w-4 md:w-5" /> : <Moon className="h-4 md:h-5 w-4 md:w-5" />}
-          </button>
+          <div className="flex items-center gap-2">
+            {!isKeySelected && (
+              <button 
+                onClick={handleSelectKey}
+                className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl text-xs font-black uppercase hover:bg-amber-600 transition-all shadow-md"
+              >
+                <Key className="w-4 h-4" /> Selecionar Chave
+              </button>
+            )}
+            <button 
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className={`p-2.5 rounded-full transition-all active:scale-90 ${isDarkMode ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              {isDarkMode ? <Sun className="h-4 md:h-5 w-4 md:w-5" /> : <Moon className="h-4 md:h-5 w-4 md:w-5" />}
+            </button>
+          </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10 flex-grow w-full flex flex-col">
+        {!isKeySelected && view !== AppView.RESULTS && (
+          <div className="mb-6 p-6 bg-amber-50 border border-amber-200 rounded-3xl text-center">
+            <h3 className="text-amber-800 font-black uppercase text-sm mb-2">Configuração Necessária</h3>
+            <p className="text-amber-700 text-xs mb-4">Para utilizar os modelos avançados de análise (Gemini 3 Pro), você precisa selecionar uma chave de API válida de um projeto com faturamento ativo.</p>
+            <button 
+              onClick={handleSelectKey}
+              className="px-6 py-3 bg-amber-600 text-white font-black rounded-2xl hover:bg-amber-700 transition-all text-sm shadow-lg shadow-amber-200"
+            >
+              CONFIGURAR CHAVE AGORA
+            </button>
+            <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="block mt-3 text-[10px] text-amber-500 underline font-bold">Ver documentação de faturamento</a>
+          </div>
+        )}
+
         {error && (
           <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-2xl flex items-center animate-fade-in">
             <span className="mr-3 text-lg">⚠️</span> 
