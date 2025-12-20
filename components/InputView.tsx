@@ -1,7 +1,5 @@
-
-import React, { useState, ChangeEvent } from 'react';
-import { Upload, FileText, Play, RefreshCw, Calendar, Clock, CheckCircle } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import React, { useState } from 'react';
+import { Play, RefreshCw } from 'lucide-react';
 import { LOGO_URL } from '../constants';
 
 interface InputViewProps {
@@ -14,7 +12,6 @@ interface InputViewProps {
 const NAMES = ["João", "Maria", "Carlos", "Ana", "Pedro", "Lucia", "Marcos", "Fernanda", "Roberto", "Juliana", "Eduardo", "Sofia", "Rafael", "Beatriz", "Lucas", "Gabriela", "Felipe", "Renata", "Thiago", "Camila"];
 const SURNAMES = ["Silva", "Souza", "Pereira", "Oliveira", "Santos", "Costa", "Lima", "Rocha", "Almeida", "Dias", "Mello", "Nunes"];
 
-// 10 Segmentos que convergem estrategicamente
 const STRATEGIC_SEGMENTS = [
   "Tecnologia (Software)",
   "Construção Civil",
@@ -42,33 +39,11 @@ function generateRandomDemoData(count: number): string {
   return data;
 }
 
-const InputView: React.FC<InputViewProps> = ({ onAnalyze, isLoading, isDarkMode, onBack }) => {
+const InputView: React.FC<InputViewProps> = ({ onAnalyze, isLoading, onBack }) => {
   const [inputText, setInputText] = useState('');
-  const [activeMethod, setActiveMethod] = useState<'paste' | 'file'>('paste');
   const [eventName, setEventName] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [eventTime, setEventTime] = useState('');
-
-  const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const fileType = file.name.split('.').pop()?.toLowerCase();
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (fileType === 'xlsx' || fileType === 'xls') {
-          const data = new Uint8Array(event.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const csvText = XLSX.utils.sheet_to_csv(workbook.Sheets[workbook.SheetNames[0]]);
-          setInputText(csvText);
-        } else {
-          setInputText(event.target?.result as string);
-        }
-        setActiveMethod('paste');
-      };
-      if (fileType === 'xlsx' || fileType === 'xls') reader.readAsArrayBuffer(file);
-      else reader.readAsText(file);
-    }
-  };
 
   const handleDemo = () => {
     const randomData = generateRandomDemoData(30);
@@ -76,7 +51,6 @@ const InputView: React.FC<InputViewProps> = ({ onAnalyze, isLoading, isDarkMode,
     setEventDate('2025-05-15');
     setEventTime('09:00');
     setInputText(randomData);
-    setActiveMethod('paste');
   };
 
   const handleAnalyzeClick = () => {

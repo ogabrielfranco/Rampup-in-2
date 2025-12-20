@@ -35,7 +35,7 @@ function generateRandomGuestData(count: number): string {
   return data;
 }
 
-const HostInputView: React.FC<HostInputViewProps> = ({ onAnalyze, isLoading, isDarkMode, onBack }) => {
+const HostInputView: React.FC<HostInputViewProps> = ({ onAnalyze, isLoading, onBack }) => {
   const [hostsText, setHostsText] = useState('');
   const [participantsText, setParticipantsText] = useState('');
 

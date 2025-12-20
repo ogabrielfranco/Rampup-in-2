@@ -1,28 +1,24 @@
-
 import React, { useState, useMemo, useDeferredValue, useRef } from 'react';
 import { AnalysisResult, Participant, IndividualScore } from '../types';
 import SeatingView from './SeatingView';
 import { 
-  BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, Tooltip, CartesianGrid
+  BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip
 } from 'recharts';
 import { 
-  ArrowLeft, ArrowRight, FileSpreadsheet, Search, 
-  X, Crown, ChevronRight, FileText, Presentation, 
-  Zap, FileDown, Target, Briefcase, TrendingUp, AlertCircle, Users, ShoppingCart, TrendingDown, Handshake
+  ArrowLeft, ArrowRight, Search, 
+  X, Crown, ChevronRight, FileText, 
+  Zap, FileDown, Target, Briefcase, AlertCircle, Users, ShoppingCart, TrendingDown, Handshake
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
-import * as XLSX from 'xlsx';
-import pptxgen from 'pptxgenjs';
 
-interface AnalysisViewProps {
-  data: AnalysisResult;
-  onReset: () => void;
+interface SynergyBadgeProps {
+  type?: string;
   isDarkMode: boolean;
 }
 
-const SynergyBadge: React.FC<{ type?: string, isDarkMode: boolean }> = ({ type, isDarkMode }) => {
+const SynergyBadge: React.FC<SynergyBadgeProps> = ({ type, isDarkMode }) => {
   if (!type) return null;
   
   const config = {
@@ -57,14 +53,16 @@ const SynergyBadge: React.FC<{ type?: string, isDarkMode: boolean }> = ({ type, 
   );
 };
 
-const ParticipantRow: React.FC<{
+interface ParticipantRowProps {
   item: { p: Participant; score: IndividualScore };
   isExpanded: boolean;
   onToggle: () => void;
   participantMap: Map<string, Participant>;
   allConnections: { partnerId: string; score: number; reason: string; synergyType?: string }[];
   isDarkMode: boolean;
-}> = ({ item, isExpanded, onToggle, participantMap, allConnections, isDarkMode }) => {
+}
+
+const ParticipantRow: React.FC<ParticipantRowProps> = ({ item, isExpanded, onToggle, participantMap, allConnections, isDarkMode }) => {
   const hasInbound = allConnections.length > 0;
   
   return (
@@ -158,6 +156,12 @@ const ParticipantRow: React.FC<{
   );
 };
 
+interface AnalysisViewProps {
+  data: AnalysisResult;
+  onReset: () => void;
+  isDarkMode: boolean;
+}
+
 const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'matches' | 'list' | 'room'>('overview');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -175,11 +179,9 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
     return map;
   }, [data.participants]);
 
-  // Unificação de conexões com inversão de tipo (Compra <-> Venda) para visualização completa
   const unifiedConnectionsMap = useMemo(() => {
     const map = new Map<string, { partnerId: string; score: number; reason: string; synergyType?: string }[]>();
     
-    // Outbound
     data.individualScores.forEach(score => {
       const list = map.get(score.participantId) || [];
       score.recommendedConnections?.forEach(conn => {
@@ -188,7 +190,6 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
       map.set(score.participantId, list);
     });
 
-    // Inbound (Garantindo que todos tenham matches)
     data.individualScores.forEach(score => {
       score.recommendedConnections?.forEach(conn => {
         const targetId = conn.partnerId;
@@ -270,7 +271,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
       .slice(0, 10);
   }, [data.participants]);
 
-  const captureElement = async (ref: React.RefObject<HTMLDivElement>) => {
+  const captureElement = async (ref: React.RefObject<HTMLDivElement | null>) => {
     if (!ref.current) return null;
     const canvas = await html2canvas(ref.current, {
       scale: 2,

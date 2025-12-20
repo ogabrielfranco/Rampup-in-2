@@ -1,7 +1,7 @@
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { AnalysisResult, LayoutFormat, Participant, IndividualScore } from '../types';
-import { LayoutDashboard, Users, User, ArrowRight, Grid, Monitor, Disc, Rows, RectangleHorizontal, Magnet, AlignJustify, Save, Filter, ChevronDown, Check, Image as ImageIcon, MousePointerClick, Eraser, Move, Plus, Crown, Circle, Square, Flower, DoorOpen, ZoomIn, ZoomOut, Maximize, Settings2, Trash2, RotateCw } from 'lucide-react';
+import { AnalysisResult, LayoutFormat, Participant } from '../types';
+// Added Check and Image (aliased as ImageIcon) to lucide-react imports to fix "Cannot find name" errors.
+import { LayoutDashboard, Users, User, Grid, Monitor, Disc, Rows, RectangleHorizontal, Magnet, AlignJustify, Save, Circle, Square, Flower, ZoomIn, ZoomOut, Settings2, Trash2, Crown, MousePointerClick, Eraser, Check, Image as ImageIcon } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 interface SeatingViewProps {
@@ -30,10 +30,9 @@ interface SeatCardProps {
   isDarkMode: boolean;
   isDimmed: boolean;
   score?: number;
-  readOnly?: boolean;
 }
 
-const SeatCard: React.FC<SeatCardProps> = ({ p, idx, isDarkMode, isDimmed, score, readOnly }) => (
+const SeatCard: React.FC<SeatCardProps> = ({ p, idx, isDarkMode, isDimmed, score }) => (
   <div className={`flex items-center gap-2 p-2 rounded-lg border-2 w-full mb-2 transition-opacity duration-300 relative ${
      isDimmed ? 'opacity-20 grayscale' : 'opacity-100'
   } ${
@@ -65,23 +64,22 @@ const SeatCard: React.FC<SeatCardProps> = ({ p, idx, isDarkMode, isDimmed, score
   </div>
 );
 
-// Custom Object Types
 type CustomObjectType = 'seat' | 'table_round' | 'table_rect' | 'stage' | 'plant';
 
 interface ObjectProperties {
-  width?: number; // relative unit (e.g. roughly px in base scale)
+  width?: number;
   height?: number;
-  rotation?: number; // degrees
-  shape?: 'circle' | 'square' | 'rounded'; // for seats/tables
+  rotation?: number;
+  shape?: 'circle' | 'square' | 'rounded';
   color?: string;
 }
 
 interface CustomObject {
   id: string;
   type: CustomObjectType;
-  x: number; // percentage
-  y: number; // percentage
-  participantIndex?: number; // for seats
+  x: number;
+  y: number;
+  participantIndex?: number;
   properties: ObjectProperties;
 }
 
@@ -94,29 +92,23 @@ const TOOLBAR_ITEMS: { type: CustomObjectType; label: string; icon: any }[] = [
 ];
 
 const SeatingView: React.FC<SeatingViewProps> = ({ data, isDarkMode, readOnly = false, overrideLayout, onLayoutChange }) => {
-  // Load saved layout or use suggested
   const [selectedLayout, setSelectedLayout] = useState<LayoutFormat>(() => {
     if (overrideLayout) return overrideLayout;
     const saved = localStorage.getItem('rampup_saved_layout');
     return (saved as LayoutFormat) || data.suggestedLayout;
   });
 
-  // Sync with override prop
   useEffect(() => {
     if (overrideLayout && overrideLayout !== selectedLayout) {
       setSelectedLayout(overrideLayout);
     }
-  }, [overrideLayout]);
+  }, [overrideLayout, selectedLayout]);
 
-  // Notify parent of changes
   useEffect(() => {
     onLayoutChange?.(selectedLayout);
   }, [selectedLayout, onLayoutChange]);
 
-  // Zoom State
   const [zoomLevel, setZoomLevel] = useState(1);
-
-  // Custom Layout State
   const [customObjects, setCustomObjects] = useState<CustomObject[]>([]);
   const [activeTool, setActiveTool] = useState<CustomObjectType | null>(null);
   const [isDragging, setIsDragging] = useState<string | null>(null);
@@ -128,7 +120,6 @@ const SeatingView: React.FC<SeatingViewProps> = ({ data, isDarkMode, readOnly = 
   const [showSavedToast, setShowSavedToast] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
 
-  // Helper to get participant object
   const getParticipant = (id: string) => data.participants.find(p => p.id === id);
   const getScore = (id: string) => data.individualScores.find(s => s.participantId === id)?.score || 0;
 
@@ -141,7 +132,7 @@ const SeatingView: React.FC<SeatingViewProps> = ({ data, isDarkMode, readOnly = 
   }, [data.participants]);
 
   const checkVisibility = (p: Participant) => {
-    if (readOnly) return true; // Always visible in readonly mode
+    if (readOnly) return true;
     const score = getScore(p.id);
     const matchesSegment = filterSegment ? p.segment === filterSegment : true;
     const matchesScore = score >= minScore;
@@ -150,7 +141,6 @@ const SeatingView: React.FC<SeatingViewProps> = ({ data, isDarkMode, readOnly = 
 
   const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.1, 2));
   const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 0.1, 0.5));
-  const handleResetZoom = () => setZoomLevel(1);
 
   const handleSaveLayout = () => {
     localStorage.setItem('rampup_saved_layout', selectedLayout);
@@ -181,7 +171,6 @@ const SeatingView: React.FC<SeatingViewProps> = ({ data, isDarkMode, readOnly = 
     }
   };
 
-  // Custom Layout Handlers
   const handleCanvasClick = (e: React.MouseEvent) => {
     if (readOnly) return;
     if ((e.target as HTMLElement) === containerRef.current) setSelectedObjectId(null);
@@ -242,15 +231,10 @@ const SeatingView: React.FC<SeatingViewProps> = ({ data, isDarkMode, readOnly = 
   };
 
   const handleObjectDragEnd = () => {
-    if (readOnly) setIsDragging(null);
     setIsDragging(null);
   };
 
   const clearCustomObjects = () => setCustomObjects([]);
-
-  const updateSelectedObject = (key: keyof ObjectProperties, value: any) => {
-      setCustomObjects(prev => prev.map(obj => obj.id === selectedObjectId ? { ...obj, properties: { ...obj.properties, [key]: value } } : obj));
-  };
 
   const deleteSelectedObject = () => {
       if (!selectedObjectId) return;
@@ -265,7 +249,6 @@ const SeatingView: React.FC<SeatingViewProps> = ({ data, isDarkMode, readOnly = 
       case 'custom':
         return (
           <div className="flex flex-col h-full min-h-[600px] overflow-hidden relative">
-             {/* Toolbar */}
              {!readOnly && (
              <div className="flex flex-wrap items-center gap-2 mb-4 p-2 rounded-lg bg-gray-100 dark:bg-gray-800 z-30 relative">
                 <span className="text-xs font-bold uppercase mr-2 opacity-50">Ferramentas:</span>
@@ -302,7 +285,6 @@ const SeatingView: React.FC<SeatingViewProps> = ({ data, isDarkMode, readOnly = 
                    : 'border-gray-300 bg-white'
                }`}
              >
-                {/* Property Panel */}
                 {!readOnly && getSelectedObject() && (
                   <div className={`absolute top-4 right-4 z-40 p-4 rounded-xl shadow-xl w-64 border animate-fade-in ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                       <div className="flex justify-between items-center mb-3">
@@ -315,7 +297,6 @@ const SeatingView: React.FC<SeatingViewProps> = ({ data, isDarkMode, readOnly = 
                   </div>
                 )}
 
-                {/* Grid Lines */}
                 <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: `linear-gradient(${isDarkMode ? '#555' : '#ccc'} 1px, transparent 1px), linear-gradient(90deg, ${isDarkMode ? '#555' : '#ccc'} 1px, transparent 1px)`, backgroundSize: '40px 40px' }}></div>
 
                 {customObjects.map((obj) => {
@@ -350,7 +331,7 @@ const SeatingView: React.FC<SeatingViewProps> = ({ data, isDarkMode, readOnly = 
                          } ${visible ? 'opacity-100' : 'opacity-20 grayscale'} ${obj.properties.shape === 'square' ? 'rounded-md' : 'rounded-full'}`}>
                             {p.isHost ? <Crown className="w-4 h-4" /> : obj.participantIndex + 1}
                          </div>
-                         <div className={`mt-1 px-2 py-0.5 rounded text-[9px] font-bold whitespace-nowrap shadow-md pointer-events-none transform -rotate-[${obj.properties.rotation || 0}deg] ${
+                         <div className={`mt-1 px-2 py-0.5 rounded text-[9px] font-bold whitespace-nowrap shadow-md pointer-events-none ${
                            p.isHost ? 'bg-amber-500 text-white' : isDarkMode ? 'bg-black text-white' : 'bg-gray-800 text-white'
                          }`}>
                            {p.name.split(' ')[0]}
@@ -422,7 +403,7 @@ const SeatingView: React.FC<SeatingViewProps> = ({ data, isDarkMode, readOnly = 
                 <div className={`absolute -top-6 left-1/2 -translate-x-1/2 px-8 py-2 rounded-full text-lg font-black uppercase tracking-widest shadow-xl ${isDarkMode ? 'bg-gray-700 text-white' : 'bg-emerald-800 text-white'}`}>Mesa Executiva</div>
                 {linearParticipants.map((p, idx) => (
                   <div key={p.id} className="w-28">
-                    <SeatCard p={p} idx={idx + 1} isDarkMode={isDarkMode} isDimmed={!checkVisibility(p)} score={getScore(p.id)} readOnly={readOnly} />
+                    <SeatCard p={p} idx={idx + 1} isDarkMode={isDarkMode} isDimmed={!checkVisibility(p)} score={getScore(p.id)} />
                   </div>
                 ))}
              </div>
@@ -440,13 +421,13 @@ const SeatingView: React.FC<SeatingViewProps> = ({ data, isDarkMode, readOnly = 
           <div className="flex justify-center p-12 w-full overflow-x-auto">
              <div className="flex gap-8 items-start min-w-[900px] w-full max-w-6xl">
                 <div className="flex flex-col w-1/4 pt-24 gap-3">
-                   {leftSide.map((p, i) => <SeatCard key={p.id} p={p} idx={i + 1} isDarkMode={isDarkMode} isDimmed={!checkVisibility(p)} score={getScore(p.id)} readOnly={readOnly} />)}
+                   {leftSide.map((p, i) => <SeatCard key={p.id} p={p} idx={i + 1} isDarkMode={isDarkMode} isDimmed={!checkVisibility(p)} score={getScore(p.id)} />)}
                 </div>
                 <div className="flex flex-col w-2/4">
                    <div className="flex flex-wrap justify-center gap-3 mb-12">
                       {topSide.map((p, i) => (
                         <div key={p.id} className="w-24">
-                          <SeatCard p={p} idx={uSideCount + i + 1} isDarkMode={isDarkMode} isDimmed={!checkVisibility(p)} score={getScore(p.id)} readOnly={readOnly} />
+                          <SeatCard p={p} idx={uSideCount + i + 1} isDarkMode={isDarkMode} isDimmed={!checkVisibility(p)} score={getScore(p.id)} />
                         </div>
                       ))}
                    </div>
@@ -457,7 +438,7 @@ const SeatingView: React.FC<SeatingViewProps> = ({ data, isDarkMode, readOnly = 
                    </div>
                 </div>
                 <div className="flex flex-col w-1/4 pt-24 gap-3">
-                   {rightSide.map((p, i) => <SeatCard key={p.id} p={p} idx={uSideCount + uTopCount + i + 1} isDarkMode={isDarkMode} isDimmed={!checkVisibility(p)} score={getScore(p.id)} readOnly={readOnly} />)}
+                   {rightSide.map((p, i) => <SeatCard key={p.id} p={p} idx={uSideCount + uTopCount + i + 1} isDarkMode={isDarkMode} isDimmed={!checkVisibility(p)} score={getScore(p.id)} />)}
                 </div>
              </div>
           </div>
@@ -475,7 +456,7 @@ const SeatingView: React.FC<SeatingViewProps> = ({ data, isDarkMode, readOnly = 
              }`}>
                 {tTop.map((p, idx) => (
                    <div key={p.id} className="w-28">
-                     <SeatCard p={p} idx={idx + 1} isDarkMode={isDarkMode} isDimmed={!checkVisibility(p)} score={getScore(p.id)} readOnly={readOnly} />
+                     <SeatCard p={p} idx={idx + 1} isDarkMode={isDarkMode} isDimmed={!checkVisibility(p)} score={getScore(p.id)} />
                    </div>
                 ))}
                 <div className="absolute -top-4 px-6 py-1 bg-amber-500 text-white font-black rounded-full shadow-lg">PAINEL ESTRATÉGICO</div>
@@ -485,7 +466,7 @@ const SeatingView: React.FC<SeatingViewProps> = ({ data, isDarkMode, readOnly = 
              }`}>
                 {tLeg.map((p, idx) => (
                   <div key={p.id} className="w-[320px]">
-                     <SeatCard p={p} idx={tTopCount + idx + 1} isDarkMode={isDarkMode} isDimmed={!checkVisibility(p)} score={getScore(p.id)} readOnly={readOnly} />
+                     <SeatCard p={p} idx={tTopCount + idx + 1} isDarkMode={isDarkMode} isDimmed={!checkVisibility(p)} score={getScore(p.id)} />
                   </div>
                 ))}
              </div>
@@ -502,15 +483,15 @@ const SeatingView: React.FC<SeatingViewProps> = ({ data, isDarkMode, readOnly = 
         return (
           <div className="flex justify-center p-12 w-full overflow-x-auto">
             <div className="flex flex-col items-center justify-center gap-6 min-w-[800px]">
-                <div className="flex gap-4">{oTop.map((p, i) => <div key={p.id} className="w-28"><SeatCard p={p} idx={i + 1} isDarkMode={isDarkMode} isDimmed={!checkVisibility(p)} readOnly={readOnly} /></div>)}</div>
+                <div className="flex gap-4">{oTop.map((p, i) => <div key={p.id} className="w-28"><SeatCard p={p} idx={i + 1} isDarkMode={isDarkMode} isDimmed={!checkVisibility(p)} /></div>)}</div>
                 <div className="flex justify-between w-full max-w-6xl gap-12">
-                   <div className="flex flex-col gap-3">{oLeft.map((p, i) => <div key={p.id} className="w-48"><SeatCard p={p} idx={sCount * 3 + i + 1} isDarkMode={isDarkMode} isDimmed={!checkVisibility(p)} readOnly={readOnly} /></div>)}</div>
+                   <div className="flex flex-col gap-3">{oLeft.map((p, i) => <div key={p.id} className="w-48"><SeatCard p={p} idx={sCount * 3 + i + 1} isDarkMode={isDarkMode} isDimmed={!checkVisibility(p)} /></div>)}</div>
                    <div className={`flex-1 rounded-2xl border-8 shadow-inner opacity-20 flex items-center justify-center ${isDarkMode ? 'border-gray-600 bg-gray-900' : 'border-emerald-800 bg-white'}`}>
                       <span className="text-2xl font-black tracking-[1em] uppercase opacity-40 text-center">Foco Central</span>
                    </div>
-                   <div className="flex flex-col gap-3">{oRight.map((p, i) => <div key={p.id} className="w-48"><SeatCard p={p} idx={sCount + i + 1} isDarkMode={isDarkMode} isDimmed={!checkVisibility(p)} readOnly={readOnly} /></div>)}</div>
+                   <div className="flex flex-col gap-3">{oRight.map((p, i) => <div key={p.id} className="w-48"><SeatCard p={p} idx={sCount + i + 1} isDarkMode={isDarkMode} isDimmed={!checkVisibility(p)} /></div>)}</div>
                 </div>
-                <div className="flex gap-4">{oBottom.map((p, i) => <div key={p.id} className="w-28"><SeatCard p={p} idx={sCount * 2 + i + 1} isDarkMode={isDarkMode} isDimmed={!checkVisibility(p)} readOnly={readOnly} /></div>)}</div>
+                <div className="flex gap-4">{oBottom.map((p, i) => <div key={p.id} className="w-28"><SeatCard p={p} idx={sCount * 2 + i + 1} isDarkMode={isDarkMode} isDimmed={!checkVisibility(p)} /></div>)}</div>
             </div>
           </div>
         );
@@ -532,7 +513,7 @@ const SeatingView: React.FC<SeatingViewProps> = ({ data, isDarkMode, readOnly = 
                    <div key={rIdx} className="grid grid-cols-4 gap-6 w-full">
                       {row.map((p, cIdx) => (
                          <div key={p.id} className="w-full">
-                            <SeatCard p={p} idx={rIdx * classroomCols + cIdx + 1} isDarkMode={isDarkMode} isDimmed={!checkVisibility(p)} score={getScore(p.id)} readOnly={readOnly} />
+                            <SeatCard p={p} idx={rIdx * classroomCols + cIdx + 1} isDarkMode={isDarkMode} isDimmed={!checkVisibility(p)} score={getScore(p.id)} />
                             <div className={`h-3 w-[95%] mx-auto mt-2 rounded-full shadow-inner opacity-40 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-400'}`}></div>
                          </div>
                       ))}
@@ -551,7 +532,7 @@ const SeatingView: React.FC<SeatingViewProps> = ({ data, isDarkMode, readOnly = 
              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-6 min-w-[700px]">
                {linearParticipants.map((p, idx) => (
                  <div key={p.id} className="w-full">
-                    <SeatCard p={p} idx={idx + 1} isDarkMode={isDarkMode} isDimmed={!checkVisibility(p)} score={getScore(p.id)} readOnly={readOnly} />
+                    <SeatCard p={p} idx={idx + 1} isDarkMode={isDarkMode} isDimmed={!checkVisibility(p)} score={getScore(p.id)} />
                  </div>
                ))}
              </div>
