@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { AnalysisResult, LayoutFormat, Participant } from '../types';
-// Added Check and Image (aliased as ImageIcon) to lucide-react imports to fix "Cannot find name" errors.
-import { LayoutDashboard, Users, User, Grid, Monitor, Disc, Rows, RectangleHorizontal, Magnet, AlignJustify, Save, Circle, Square, Flower, ZoomIn, ZoomOut, Settings2, Trash2, Crown, MousePointerClick, Eraser, Check, Image as ImageIcon } from 'lucide-react';
+// Removido o ícone 'Grid' que não estava sendo utilizado e causava erro de build
+import { LayoutDashboard, Users, User, Monitor, Disc, Rows, RectangleHorizontal, Magnet, AlignJustify, Save, Circle, Square, Flower, ZoomIn, ZoomOut, Settings2, Trash2, Crown, MousePointerClick, Eraser, Check, Image as ImageIcon } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 interface SeatingViewProps {
