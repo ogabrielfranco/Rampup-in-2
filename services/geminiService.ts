@@ -1,37 +1,33 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult } from "../types";
 
-// Tipagem para o ambiente global
-declare const process: any;
-
-const modelName = "gemini-3-pro-preview";
+const MODEL_NAME = "gemini-3-pro-preview";
 
 const analysisSchema = {
   type: Type.OBJECT,
   properties: {
     overallScore: {
       type: Type.NUMBER,
-      description: "O 'Business Index' geral (0-100) da agenda, baseado na densidade de sinergias do grupo.",
+      description: "Índice de Negócio (IN) geral do grupo de 0 a 100.",
     },
     summary: {
       type: Type.STRING,
-      description: "Resumo executivo analítico focado em ecossistemas, pontes de inovação e hubs de sinergia.",
+      description: "Resumo executivo estratégico focado em sinergias detectadas.",
     },
     averageEmployees: {
       type: Type.NUMBER,
-      description: "Média aritmética de colaboradores das empresas.",
+      description: "Média estimada de colaboradores das empresas.",
     },
     participants: {
       type: Type.ARRAY,
       items: {
         type: Type.OBJECT,
         properties: {
-          id: { type: Type.STRING },
+          id: { type: Type.STRING, description: "ID único (pode ser o nome ou um UUID)." },
           name: { type: Type.STRING },
           company: { type: Type.STRING },
           segment: { type: Type.STRING },
           employeeCount: { type: Type.STRING },
-          eventName: { type: Type.STRING },
           isHost: { type: Type.BOOLEAN }
         },
         required: ["id", "name", "company", "segment"],
@@ -43,10 +39,7 @@ const analysisSchema = {
         type: Type.OBJECT,
         properties: {
           participantId: { type: Type.STRING },
-          score: { 
-            type: Type.NUMBER, 
-            description: "Índice de Negócio individual (1-100). Cálculo: IN = (E * 0.50) + (P * 0.30) + (D * 0.20)." 
-          },
+          score: { type: Type.NUMBER, description: "Score individual (0-100) baseado no modelo IN." },
           potentialConnections: { type: Type.NUMBER },
           scoreReasoning: { type: Type.STRING },
           recommendedConnections: {
@@ -56,11 +49,10 @@ const analysisSchema = {
               properties: {
                 partnerId: { type: Type.STRING },
                 score: { type: Type.NUMBER },
-                reason: { type: Type.STRING, description: "Justificativa baseada em Cadeia de Valor, Hub de Sinergia ou Ponte de Inovação." },
+                reason: { type: Type.STRING },
                 synergyType: { 
                   type: Type.STRING, 
-                  enum: ['COMPRA', 'VENDA', 'PARCERIA'],
-                  description: "Classificação da sinergia entre os dois participantes."
+                  enum: ['COMPRA', 'VENDA', 'PARCERIA']
                 }
               },
               required: ["partnerId", "score", "reason", "synergyType"]
@@ -79,13 +71,14 @@ const analysisSchema = {
           participant2Id: { type: Type.STRING },
           score: { type: Type.NUMBER },
           reasoning: { type: Type.STRING },
-          synergyType: { 
-            type: Type.STRING, 
-            enum: ['COMPRA', 'VENDA', 'PARCERIA']
-          }
+          synergyType: { type: Type.STRING, enum: ['COMPRA', 'VENDA', 'PARCERIA'] }
         },
         required: ["participant1Id", "participant2Id", "score", "reasoning", "synergyType"],
       },
+    },
+    suggestedLayout: {
+      type: Type.STRING,
+      enum: ['teatro', 'sala_aula', 'mesa_o', 'conferencia', 'mesa_u', 'mesa_t', 'recepcao', 'buffet', 'custom'],
     },
     segmentDistribution: {
       type: Type.ARRAY,
@@ -98,90 +91,93 @@ const analysisSchema = {
         required: ["name", "value"],
       },
     },
-    suggestedLayout: {
-      type: Type.STRING,
-      enum: ['teatro', 'sala_aula', 'mesa_o', 'conferencia', 'mesa_u', 'mesa_t', 'recepcao', 'buffet', 'custom'],
-    },
     seatingGroups: {
       type: Type.ARRAY,
       items: { type: Type.ARRAY, items: { type: Type.STRING } }
     }
   },
-  required: ["overallScore", "summary", "averageEmployees", "participants", "individualScores", "topMatches", "segmentDistribution", "suggestedLayout", "seatingGroups"],
+  required: [
+    "overallScore", "summary", "averageEmployees", "participants", 
+    "individualScores", "topMatches", "suggestedLayout", 
+    "segmentDistribution", "seatingGroups"
+  ],
 };
 
+const SYSTEM_INSTRUCTION = `Você é o "Rampup Intel", uma IA de elite especializada em Networking Estratégico e Business Intelligence.
+Sua função é transformar listas de convidados em insights de negócios acionáveis através do cálculo do "Índice de Negócio" (IN).
+
+METODOLOGIA:
+1. Índice de Negócio (IN): Calcule de 0 a 100 considerando Essencialidade (50%), Poder de Indicação (30%) e Densidade de Conexão (20%).
+2. Classificação de Sinergia: 
+   - COMPRA: Um participante tem demanda pelo que o outro oferece.
+   - VENDA: O inverso de compra.
+   - PARCERIA: Serviços complementares ou públicos-alvo idênticos.
+3. Análise do Host: Se houver um Host definido, priorize sinergias que beneficiem o Host e identifique quem são os "Alvos de Valor" para o anfitrião.
+4. Mapeamento de Sala: Sugira mesas e grupos baseados no máximo potencial de networking convergente.
+
+FORMATO DE RESPOSTA:
+Retorne EXCLUSIVAMENTE um objeto JSON que siga rigorosamente o esquema definido. Não adicione texto antes ou depois do JSON.`;
+
 export const analyzeNetworkingData = async (rawData: string): Promise<AnalysisResult> => {
-  const prompt = `
-    📑 MEGA PROMPT SUPREMO: ENGENHARIA DE ECOSSISTEMAS E INTELIGÊNCIA DE NETWORKING
-
-    Você é um AI Master em Business Intelligence. Analise a lista para calcular o Índice de Negócio (IN) usando:
-    IN = (E * 0.50) + (P * 0.30) + (D * 0.20)
-    
-    Onde E=Essencialidade, P=Poder de Indicação, D=Densidade de Conexão.
-    Identifique sinergias de COMPRA, VENDA e PARCERIA.
-
-    DADOS:
-    ${rawData}
-  `;
+  const prompt = `Analise os dados abaixo e extraia a inteligência de networking conforme as instruções do sistema:\n\n${rawData}`;
   return callGemini(prompt);
 };
 
 export const analyzeHostPotential = async (hostsData: string, participantsData: string): Promise<AnalysisResult> => {
-    const prompt = `
-      📑 MEGA PROMPT SUPREMO: INTELIGÊNCIA DE NETWORKING FOCADA NO HOST
+  const prompt = `
+    DADOS DO ANFITRIÃO (HOST):
+    ${hostsData}
 
-      ATUAÇÃO: Você é um Engenheiro de Ecossistemas. Sua missão é analisar a relação estratégica entre o(s) HOST(S) e os CONVIDADOS.
-      
-      OBJETIVO:
-      1. Calcule o Índice de Negócio (IN) para cada convidado focado em sua utilidade para o HOST e para o grupo.
-      2. Mapeie sinergias onde o HOST pode comprar, vender ou fazer parceria com os convidados.
-      3. Identifique conexões valiosas entre os próprios convidados que o HOST pode facilitar (autoridade).
-      
-      MODELO MATEMÁTICO:
-      IN = (Sinergia com Host * 0.60) + (Poder do Convidado * 0.40)
-      
-      REGRAS:
-      - Inclua os HOSTS e CONVIDADOS na lista final de 'participants'.
-      - Identifique claramente o tipo de sinergia ('COMPRA', 'VENDA', 'PARCERIA').
-      - O 'summary' deve focar em como o HOST pode extrair valor desta agenda específica.
+    LISTA DE CONVIDADOS:
+    ${participantsData}
 
-      DADOS DO(S) HOST(S):
-      ${hostsData}
-
-      LISTA DE CONVIDADOS:
-      ${participantsData}
-    `;
-    return callGemini(prompt);
+    INSTRUÇÃO ADICIONAL: Analise com foco total no HOST. Identifique como cada convidado pode ser útil para o Host e vice-versa. 
+    Inclua o Host e os Convidados no array final de participantes. Garanta que o resumo (summary) mencione as 3 principais oportunidades para o Host.
+  `;
+  return callGemini(prompt);
 };
 
 const callGemini = async (prompt: string): Promise<AnalysisResult> => {
-    try {
-        const apiKey = typeof process !== 'undefined' && process.env ? process.env.API_KEY : '';
-        if (!apiKey) throw new Error("API_KEY não configurada no ambiente.");
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    throw new Error("API Key não configurada. Verifique as variáveis de ambiente.");
+  }
 
-        const ai = new GoogleGenAI({ apiKey });
-        const response = await ai.models.generateContent({
-          model: modelName,
-          contents: [{ parts: [{ text: prompt }] }],
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: analysisSchema,
-            temperature: 0.1,
-          },
-        });
-        
-        const jsonText = response.text;
-        if (!jsonText) throw new Error("A IA retornou uma resposta vazia.");
-        
-        const result = JSON.parse(jsonText);
-        
-        // Garantir que campos obrigatórios existam mesmo em falhas parciais da IA
-        if (!result.seatingGroups) result.seatingGroups = [];
-        if (!result.topMatches) result.topMatches = [];
-        
-        return result as AnalysisResult;
-      } catch (error) {
-        console.error("Erro crítico na chamada Gemini:", error);
-        throw error;
-      }
+  // Instancia o SDK conforme as diretrizes
+  const ai = new GoogleGenAI({ apiKey });
+
+  try {
+    const response = await ai.models.generateContent({
+      model: MODEL_NAME,
+      contents: [{ parts: [{ text: prompt }] }],
+      config: {
+        systemInstruction: SYSTEM_INSTRUCTION,
+        responseMimeType: "application/json",
+        responseSchema: analysisSchema,
+        temperature: 0.1, // Baixa temperatura para maior consistência em JSON
+        thinkingConfig: { thinkingBudget: 8000 } // Orçamento para raciocínio complexo
+      },
+    });
+
+    const jsonStr = response.text;
+    if (!jsonStr) {
+      throw new Error("A IA retornou uma resposta vazia.");
+    }
+
+    const parsedResult = JSON.parse(jsonStr);
+
+    // Normalização básica para garantir que campos obrigatórios existam
+    return {
+      ...parsedResult,
+      participants: parsedResult.participants || [],
+      individualScores: parsedResult.individualScores || [],
+      topMatches: parsedResult.topMatches || [],
+      seatingGroups: parsedResult.seatingGroups || []
+    } as AnalysisResult;
+
+  } catch (error: any) {
+    console.error("Erro na comunicação com Gemini:", error);
+    // Relança o erro com uma mensagem mais amigável ou técnica dependendo do contexto
+    throw new Error(error.message || "Erro desconhecido ao processar análise.");
+  }
 };
