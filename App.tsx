@@ -6,7 +6,7 @@ import HostInputView from './components/HostInputView';
 import AnalysisView from './components/AnalysisView';
 import { analyzeNetworkingData, analyzeHostPotential } from './services/geminiService';
 import { AnalysisResult, AppView, AppMode } from './types';
-import { Network, Moon, Sun, AlertCircle } from 'lucide-react';
+import { Network, Moon, Sun, AlertCircle, RefreshCw } from 'lucide-react';
 import { LOGO_URL } from './constants';
 
 const LOADING_MESSAGES = [
@@ -48,8 +48,8 @@ const App: React.FC = () => {
       setResults(result);
       setView(AppView.RESULTS);
     } catch (err: any) {
-      console.error("Analysis Error:", err);
-      setError("Erro na análise. Verifique se os dados estão corretos e se há conexão com a internet.");
+      console.error("Erro capturado no App:", err);
+      setError(err.message || "Erro inesperado na análise. Tente novamente.");
       setView(AppView.INPUT);
     }
   };
@@ -73,9 +73,15 @@ const App: React.FC = () => {
 
       <main className="max-w-5xl mx-auto px-4 py-8 flex-grow w-full">
         {error && (
-          <div className="mb-8 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-400 rounded-2xl flex items-center gap-3 animate-slide-up">
-            <AlertCircle className="w-5 h-5 shrink-0" />
-            <p className="text-xs font-bold">{error}</p>
+          <div className="mb-8 p-5 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-400 rounded-3xl flex flex-col gap-3 animate-slide-up">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-6 h-6 shrink-0" />
+              <p className="text-sm font-black uppercase tracking-tight">Falha na Inteligência Rampup</p>
+            </div>
+            <p className="text-xs font-bold opacity-80 pl-9">{error}</p>
+            <div className="pl-9 pt-2">
+              <button onClick={() => setError(null)} className="text-[10px] font-black uppercase tracking-widest px-4 py-2 bg-red-100 dark:bg-red-900/50 rounded-xl hover:bg-red-200 transition-colors">Tentar Novamente</button>
+            </div>
           </div>
         )}
 

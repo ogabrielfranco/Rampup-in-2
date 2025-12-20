@@ -1,107 +1,37 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { AnalysisResult } from "../types";
 
-// Modelo ideal para a camada gratuita e tarefas de texto
-const MODEL_NAME = "gemini-3-flash-preview";
+// Usando o modelo mais estável para a API gratuita para evitar erros de "Entity not found"
+const MODEL_NAME = "gemini-flash-latest";
 
-const analysisSchema = {
-  type: Type.OBJECT,
-  properties: {
-    overallScore: { type: Type.NUMBER },
-    summary: { type: Type.STRING },
-    averageEmployees: { type: Type.NUMBER },
-    participants: {
-      type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        properties: {
-          id: { type: Type.STRING },
-          name: { type: Type.STRING },
-          company: { type: Type.STRING },
-          segment: { type: Type.STRING },
-          employeeCount: { type: Type.STRING },
-          isHost: { type: Type.BOOLEAN }
-        },
-        required: ["id", "name", "company"]
-      }
-    },
-    individualScores: {
-      type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        properties: {
-          participantId: { type: Type.STRING },
-          score: { type: Type.NUMBER },
-          potentialConnections: { type: Type.NUMBER },
-          scoreReasoning: { type: Type.STRING },
-          recommendedConnections: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                partnerId: { type: Type.STRING },
-                score: { type: Type.NUMBER },
-                reason: { type: Type.STRING },
-                synergyType: { type: Type.STRING }
-              },
-              required: ["partnerId", "score"]
-            }
-          }
-        },
-        required: ["participantId", "score"]
-      }
-    },
-    topMatches: {
-      type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        properties: {
-          participant1Id: { type: Type.STRING },
-          participant2Id: { type: Type.STRING },
-          score: { type: Type.NUMBER },
-          reasoning: { type: Type.STRING }
-        },
-        required: ["participant1Id", "participant2Id", "score"]
-      }
-    },
-    suggestedLayout: { type: Type.STRING },
-    segmentDistribution: {
-      type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        properties: {
-          name: { type: Type.STRING },
-          value: { type: Type.NUMBER }
-        }
-      }
-    },
-    seatingGroups: {
-      type: Type.ARRAY,
-      items: { type: Type.ARRAY, items: { type: Type.STRING } }
-    }
-  },
-  required: ["overallScore", "summary", "participants", "individualScores", "topMatches"]
-};
+const SYSTEM_PROMPT = `Você é o Rampup Intel, especialista em networking empresarial.
+Sua tarefa é analisar listas de participantes e retornar um JSON estrito com:
+- overallScore (0-100)
+- summary (diagnóstico estratégico curto)
+- participants (id, name, company, segment, employeeCount, isHost)
+- individualScores (participantId, score, potentialConnections, recommendedConnections: [{partnerId, score, reason, synergyType}])
+- topMatches (participant1Id, participant2Id, score, reasoning)
+- segmentDistribution ([{name, value}])
+- seatingGroups (arrays de IDs de participantes)
 
-const SYSTEM_PROMPT = `Você é o Rampup Intel. Sua missão é analisar listas de networking empresarial.
-1. Calcule o Índice de Negócio (IN) de 0 a 100 para cada participante.
-2. Identifique sinergias reais (Compra, Venda, Parceria).
-3. Agrupe participantes com alto match em 'seatingGroups'.
-4. Seja conciso no sumário.
-Responda estritamente em JSON.`;
+REGRAS:
+1. Calcule o score baseado na sinergia de setor e tamanho de empresa.
+2. Identifique sinergias: COMPRA, VENDA ou PARCERIA.
+3. Agrupe participantes com interesses comuns.
+4. Responda APENAS o JSON, sem markdown ou explicações.`;
 
 export const analyzeNetworkingData = async (data: string): Promise<AnalysisResult> => {
-  return executeCall(`Analise esta lista de participantes de um evento de networking:\n\n${data}`);
+  return executeCall(`Analise esta lista de networking:\n\n${data}`);
 };
 
 export const analyzeHostPotential = async (host: string, guests: string): Promise<AnalysisResult> => {
-  return executeCall(`FOCO NO ANFITRIÃO:\nHOST: ${host}\nCONVIDADOS: ${guests}\nIdentifique as melhores conexões para o Host.`);
+  return executeCall(`FOCO NO HOST:\nHOST: ${host}\nCONVIDADOS: ${guests}\nIdentifique as melhores conexões para o Host.`);
 };
 
 async function executeCall(prompt: string): Promise<AnalysisResult> {
   const apiKey = process.env.API_KEY;
-  if (!apiKey) throw new Error("A chave de API não foi configurada no ambiente.");
+  if (!apiKey) throw new Error("Chave de API não encontrada no sistema.");
 
   const ai = new GoogleGenAI({ apiKey });
   
@@ -112,16 +42,18 @@ async function executeCall(prompt: string): Promise<AnalysisResult> {
       config: {
         systemInstruction: SYSTEM_PROMPT,
         responseMimeType: "application/json",
-        responseSchema: analysisSchema,
-        temperature: 0.1,
-        // Desativado para garantir compatibilidade com camada gratuita e rapidez
-        thinkingConfig: { thinkingBudget: 0 }
-      }
+        temperature: 0.2,
+      },
     });
 
-    if (!response.text) throw new Error("Resposta vazia da IA.");
-    const parsed = JSON.parse(response.text);
+    const text = response.text;
+    if (!text) throw new Error("A IA retornou uma resposta vazia.");
+    
+    // Limpeza de possíveis caracteres extras
+    const cleanJson = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    const parsed = JSON.parse(cleanJson);
 
+    // Garantir que os campos obrigatórios existam
     return {
       overallScore: parsed.overallScore || 0,
       summary: parsed.summary || "Análise concluída.",
@@ -134,7 +66,10 @@ async function executeCall(prompt: string): Promise<AnalysisResult> {
       seatingGroups: parsed.seatingGroups || []
     };
   } catch (err: any) {
-    console.error("Gemini API Error:", err);
+    console.error("Erro detalhado na API Gemini:", err);
+    // Lança erro mais amigável para a UI
+    if (err.message.includes("403")) throw new Error("Erro 403: Chave de API sem permissão ou limite atingido.");
+    if (err.message.includes("404")) throw new Error("Erro 404: Modelo não encontrado ou indisponível.");
     throw err;
   }
 }
