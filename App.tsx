@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import InputView from './components/InputView';
 import SelectionView from './components/SelectionView';
@@ -6,7 +5,7 @@ import HostInputView from './components/HostInputView';
 import AnalysisView from './components/AnalysisView';
 import { analyzeNetworkingData, analyzeHostPotential } from './services/geminiService';
 import { AnalysisResult, AppView, AppMode } from './types';
-import { Network, Moon, Sun, Key } from 'lucide-react';
+import { Network, Moon, Sun, Key, AlertTriangle } from 'lucide-react';
 import { LOGO_URL } from './constants';
 
 const LOADING_MESSAGES = [
@@ -18,21 +17,17 @@ const LOADING_MESSAGES = [
   "Otimizando matriz de negócios..."
 ];
 
-// Removed conflicting manual 'declare global' for 'window.aistudio'
-// Relying on the environment's pre-configured global types or safe type assertion.
-
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>(AppView.SELECTION);
   const [appMode, setAppMode] = useState<AppMode>('GENERAL');
   const [results, setResults] = useState<AnalysisResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{message: string, type: 'api' | 'data' | 'other'} | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const [isKeySelected, setIsKeySelected] = useState(true);
 
   useEffect(() => {
     const checkKey = async () => {
-      // Cast to any to access the injected 'aistudio' object without type conflicts.
       const aistudio = (window as any).aistudio;
       if (aistudio) {
         const hasKey = await aistudio.hasSelectedApiKey();
@@ -53,17 +48,9 @@ const App: React.FC = () => {
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | undefined;
     if (view === AppView.ANALYZING) {
-      setLoadingMessageIndex(Math.floor(Math.random() * LOADING_MESSAGES.length));
-      
       interval = setInterval(() => {
-        setLoadingMessageIndex((prev) => {
-          let next = Math.floor(Math.random() * LOADING_MESSAGES.length);
-          while (next === prev && LOADING_MESSAGES.length > 1) {
-             next = Math.floor(Math.random() * LOADING_MESSAGES.length);
-          }
-          return next;
-        });
-      }, 2500);
+        setLoadingMessageIndex(Math.floor(Math.random() * LOADING_MESSAGES.length));
+      }, 3000);
     }
     return () => {
       if (interval !== undefined) clearInterval(interval);
@@ -74,14 +61,15 @@ const App: React.FC = () => {
     const aistudio = (window as any).aistudio;
     if (aistudio) {
       await aistudio.openSelectKey();
-      // Assume the key selection was successful after triggering openSelectKey() as per instructions.
       setIsKeySelected(true);
+      setError(null);
     }
   };
 
   const handleSelectMode = (mode: AppMode) => {
     setAppMode(mode);
     setView(AppView.INPUT);
+    setError(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -92,15 +80,8 @@ const App: React.FC = () => {
       const result = await analyzeNetworkingData(text);
       setResults(result);
       setView(AppView.RESULTS);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
-      console.error(err);
-      if (err.message?.includes("Requested entity was not found")) {
-        setIsKeySelected(false);
-        setError("Erro de chave de API. Por favor, selecione a chave novamente.");
-      } else {
-        setError("Falha ao analisar os dados. Verifique sua conexão e tente novamente.");
-      }
+      processError(err);
       setView(AppView.INPUT);
     }
   };
@@ -112,16 +93,21 @@ const App: React.FC = () => {
       const result = await analyzeHostPotential(hostsData, participantsData);
       setResults(result);
       setView(AppView.RESULTS);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
-      console.error(err);
-      if (err.message?.includes("Requested entity was not found")) {
-        setIsKeySelected(false);
-        setError("Erro de chave de API. Por favor, selecione a chave novamente.");
-      } else {
-        setError("Falha ao analisar os dados do Host. Verifique se os campos estão preenchidos corretamente.");
-      }
+      processError(err);
       setView(AppView.INPUT);
+    }
+  };
+
+  const processError = (err: any) => {
+    console.error("App Error Handler:", err);
+    if (err.message === "CHAVE_NAO_CONFIGURADA" || err.message?.includes("entity was not found")) {
+      setIsKeySelected(false);
+      setError({ message: "Chave de API inválida ou ausente. Por favor, selecione uma chave ativa.", type: 'api' });
+    } else if (err.message?.includes("JSON")) {
+      setError({ message: "O volume de dados é muito grande ou o formato está confuso para a IA. Tente simplificar a lista.", type: 'data' });
+    } else {
+      setError({ message: "Falha na conexão com o motor de IA. Verifique sua internet e tente novamente.", type: 'other' });
     }
   };
 
@@ -139,84 +125,59 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className={`min-h-screen font-sans transition-colors duration-300 flex flex-col ${isDarkMode ? 'bg-black text-white selection:bg-verde-neon selection:text-black' : 'bg-gray-50 text-gray-900 selection:bg-emerald-100'}`}>
-      <header className={`border-b sticky top-0 z-[60] transition-colors duration-300 backdrop-blur-md ${isDarkMode ? 'bg-chumbo-950/80 border-gray-800' : 'bg-white/80 border-gray-200'}`}>
+    <div className={`min-h-screen font-sans transition-colors duration-300 flex flex-col ${isDarkMode ? 'bg-black text-white' : 'bg-gray-50 text-gray-900'}`}>
+      <header className={`border-b sticky top-0 z-[60] backdrop-blur-md ${isDarkMode ? 'bg-chumbo-950/80 border-gray-800' : 'bg-white/80 border-gray-200'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setView(AppView.SELECTION)}>
-            <div className={`flex items-center justify-center p-1 rounded-md h-9 md:h-10 w-auto transition-transform group-hover:scale-105 active:scale-95 ${isDarkMode ? 'bg-transparent' : 'bg-white'}`}>
-               <img 
-                 src={LOGO_URL} 
-                 alt="Rampup Business" 
-                 className={`h-full w-auto object-contain transition-all ${isDarkMode ? 'brightness-0 invert' : ''}`} 
-               />
+          <div className="flex items-center gap-3 cursor-pointer group" onClick={handleReset}>
+            <div className={`flex items-center justify-center p-1 rounded-md h-9 transition-transform ${isDarkMode ? '' : 'bg-white'}`}>
+               <img src={LOGO_URL} alt="Rampup" className={`h-full w-auto ${isDarkMode ? 'brightness-0 invert' : ''}`} />
             </div>
-            <div className={`h-6 w-px ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
-            <span className={`text-lg md:text-xl font-black tracking-tighter bg-clip-text text-transparent ${isDarkMode ? 'bg-gradient-to-r from-white to-gray-500' : 'bg-gradient-to-r from-gray-900 to-gray-500'}`}>
-              IN
-            </span>
+            <span className="text-xl font-black tracking-tighter">IN</span>
           </div>
           
           <div className="flex items-center gap-2">
             {!isKeySelected && (
               <button 
                 onClick={handleSelectKey}
-                className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl text-xs font-black uppercase hover:bg-amber-600 transition-all shadow-md"
+                className="flex items-center gap-2 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[10px] font-black uppercase shadow-md"
               >
-                <Key className="w-4 h-4" /> Selecionar Chave
+                <Key className="w-3 h-3" /> Chave
               </button>
             )}
             <button 
               onClick={() => setIsDarkMode(!isDarkMode)}
-              className={`p-2.5 rounded-full transition-all active:scale-90 ${isDarkMode ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              className={`p-2 rounded-full transition-all ${isDarkMode ? 'bg-gray-800 text-yellow-400' : 'bg-gray-100 text-gray-600'}`}
             >
-              {isDarkMode ? <Sun className="h-4 md:h-5 w-4 md:w-5" /> : <Moon className="h-4 md:h-5 w-4 md:w-5" />}
+              {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10 flex-grow w-full flex flex-col">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow w-full flex flex-col">
         {!isKeySelected && view !== AppView.RESULTS && (
-          <div className="mb-6 p-6 bg-amber-50 border border-amber-200 rounded-3xl text-center">
-            <h3 className="text-amber-800 font-black uppercase text-sm mb-2">Configuração Necessária</h3>
-            <p className="text-amber-700 text-xs mb-4">Para utilizar os modelos avançados de análise (Gemini 3 Pro), você precisa selecionar uma chave de API válida de um projeto com faturamento ativo.</p>
-            <button 
-              onClick={handleSelectKey}
-              className="px-6 py-3 bg-amber-600 text-white font-black rounded-2xl hover:bg-amber-700 transition-all text-sm shadow-lg shadow-amber-200"
-            >
-              CONFIGURAR CHAVE AGORA
-            </button>
-            <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="block mt-3 text-[10px] text-amber-500 underline font-bold">Ver documentação de faturamento</a>
+          <div className="mb-6 p-6 bg-amber-50 border border-amber-200 rounded-3xl text-center animate-fade-in">
+            <h3 className="text-amber-800 font-black uppercase text-xs mb-2">Ação Requerida</h3>
+            <p className="text-amber-700 text-[11px] mb-4">A análise requer uma chave de API paga do Google Cloud. Selecione-a abaixo:</p>
+            <button onClick={handleSelectKey} className="px-5 py-2.5 bg-amber-600 text-white font-black rounded-xl text-xs shadow-lg">CONFIGURAR CHAVE</button>
           </div>
         )}
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-2xl flex items-center animate-fade-in">
-            <span className="mr-3 text-lg">⚠️</span> 
-            <span className="text-sm font-bold">{error}</span>
+          <div className={`mb-6 p-4 border rounded-2xl flex items-start gap-3 animate-fade-in ${error.type === 'api' ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+            <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+            <div className="text-xs font-bold leading-relaxed">{error.message}</div>
           </div>
         )}
 
-        {view === AppView.SELECTION && (
-           <SelectionView onSelectMode={handleSelectMode} isDarkMode={isDarkMode} />
-        )}
+        {view === AppView.SELECTION && <SelectionView onSelectMode={handleSelectMode} isDarkMode={isDarkMode} />}
 
         {view === AppView.INPUT && (
           <div className="animate-fade-in">
             {appMode === 'GENERAL' ? (
-              <InputView 
-                onAnalyze={handleGeneralAnalyze} 
-                isLoading={false} 
-                isDarkMode={isDarkMode} 
-                onBack={handleBackToSelection}
-              />
+              <InputView onAnalyze={handleGeneralAnalyze} isLoading={false} isDarkMode={isDarkMode} onBack={handleBackToSelection} />
             ) : (
-              <HostInputView 
-                onAnalyze={handleHostAnalyze} 
-                isLoading={false} 
-                isDarkMode={isDarkMode} 
-                onBack={handleBackToSelection}
-              />
+              <HostInputView onAnalyze={handleHostAnalyze} isLoading={false} isDarkMode={isDarkMode} onBack={handleBackToSelection} />
             )}
           </div>
         )}
@@ -224,43 +185,21 @@ const App: React.FC = () => {
         {view === AppView.ANALYZING && (
           <div className="flex flex-col items-center justify-center pt-20 animate-fade-in text-center px-6">
             <div className="relative mb-10">
-              <div className={`w-28 h-28 border-4 rounded-[2.5rem] animate-spin ${isDarkMode ? 'border-gray-800 border-t-verde-neon' : 'border-gray-200 border-t-emerald-600'}`}></div>
-              <div className={`absolute top-0 left-0 w-28 h-28 border-4 rounded-[2.5rem] animate-pulse border-transparent ${isDarkMode ? 'border-b-verde-light' : 'border-b-emerald-400'}`}></div>
+              <div className={`w-24 h-24 border-4 rounded-[2rem] animate-spin ${isDarkMode ? 'border-gray-800 border-t-verde-neon' : 'border-gray-200 border-t-emerald-600'}`}></div>
               <div className="absolute inset-0 flex items-center justify-center">
-                 <Network className={`w-10 h-10 animate-pulse ${isDarkMode ? 'text-verde-light' : 'text-emerald-600'}`} />
+                 <Network className={`w-8 h-8 animate-pulse ${isDarkMode ? 'text-verde-light' : 'text-emerald-600'}`} />
               </div>
             </div>
-            
-            <div className="h-20 flex items-center justify-center max-w-sm mx-auto">
-               <h2 key={loadingMessageIndex} className={`text-xl md:text-2xl font-black uppercase tracking-tighter leading-tight animate-fade-in ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-                 {LOADING_MESSAGES[loadingMessageIndex]}
-               </h2>
-            </div>
-            <p className={`mt-4 text-sm font-bold opacity-40 uppercase tracking-widest ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Processamento de IA em tempo real</p>
+            <h2 className="text-lg font-black uppercase tracking-tighter h-12">{LOADING_MESSAGES[loadingMessageIndex]}</h2>
+            <p className="text-[10px] font-bold opacity-40 uppercase tracking-widest mt-2">Isso pode levar até 20 segundos</p>
           </div>
         )}
 
-        {view === AppView.RESULTS && results && (
-          <AnalysisView data={results} onReset={handleReset} isDarkMode={isDarkMode} />
-        )}
+        {view === AppView.RESULTS && results && <AnalysisView data={results} onReset={handleReset} isDarkMode={isDarkMode} />}
       </main>
 
-      <footer className={`py-10 text-center border-t transition-colors ${isDarkMode ? 'bg-chumbo-950 border-gray-800' : 'bg-white border-gray-200 shadow-inner'}`}>
-        <div className="flex flex-col items-center justify-center gap-4">
-           <img 
-             src={LOGO_URL} 
-             alt="Rampup Business" 
-             className={`h-8 opacity-60 hover:opacity-100 transition-all cursor-pointer hover:scale-105 ${isDarkMode ? 'brightness-0 invert' : 'grayscale hover:grayscale-0'}`} 
-           />
-           <div className="space-y-1">
-             <p className={`text-[10px] md:text-xs font-black uppercase tracking-[0.2em] ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`}>
-               Powered by Rampup Business Intel
-             </p>
-             <p className={`text-[9px] font-bold opacity-30 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-               © {new Date().getFullYear()} • Strategic Networking Intelligence
-             </p>
-           </div>
-        </div>
+      <footer className={`py-8 text-center border-t ${isDarkMode ? 'bg-black border-gray-800' : 'bg-white border-gray-200'}`}>
+        <p className="text-[10px] font-black uppercase tracking-widest opacity-30">© {new Date().getFullYear()} Rampup Business Intel</p>
       </footer>
     </div>
   );
