@@ -5,6 +5,16 @@ export default defineConfig({
   plugins: [react()],
   build: {
     outDir: 'dist',
-    sourcemap: false
+    sourcemap: false,
+    chunkSizeWarningLimit: 2000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-charts': ['recharts'],
+          'vendor-export': ['jspdf', 'jspdf-autotable', 'html2canvas', 'xlsx', 'pptxgenjs'],
+          'vendor-icons': ['lucide-react']
+        }
+      }
+    }
   }
 });
