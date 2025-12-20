@@ -2,7 +2,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult } from "../types";
 
-// Modelo ideal para a camada gratuita: ultra-rápido e preciso em JSON
+// Modelo ideal para a camada gratuita e tarefas de texto
 const MODEL_NAME = "gemini-3-flash-preview";
 
 const analysisSchema = {
@@ -101,9 +101,8 @@ export const analyzeHostPotential = async (host: string, guests: string): Promis
 
 async function executeCall(prompt: string): Promise<AnalysisResult> {
   const apiKey = process.env.API_KEY;
-  if (!apiKey) throw new Error("API_KEY_MISSING");
+  if (!apiKey) throw new Error("A chave de API não foi configurada no ambiente.");
 
-  // Inicialização no momento do uso para capturar a chave mais recente
   const ai = new GoogleGenAI({ apiKey });
   
   try {
@@ -115,18 +114,17 @@ async function executeCall(prompt: string): Promise<AnalysisResult> {
         responseMimeType: "application/json",
         responseSchema: analysisSchema,
         temperature: 0.1,
-        // Thinking Budget 0 garante velocidade máxima e menor custo de tokens na API gratuita
+        // Desativado para garantir compatibilidade com camada gratuita e rapidez
         thinkingConfig: { thinkingBudget: 0 }
       }
     });
 
-    if (!response.text) throw new Error("EMPTY_RESPONSE");
+    if (!response.text) throw new Error("Resposta vazia da IA.");
     const parsed = JSON.parse(response.text);
 
-    // Normalização defensiva para evitar quebras na UI
     return {
       overallScore: parsed.overallScore || 0,
-      summary: parsed.summary || "Análise concluída com sucesso.",
+      summary: parsed.summary || "Análise concluída.",
       averageEmployees: parsed.averageEmployees || 0,
       participants: parsed.participants || [],
       individualScores: parsed.individualScores || [],

@@ -6,7 +6,7 @@ import HostInputView from './components/HostInputView';
 import AnalysisView from './components/AnalysisView';
 import { analyzeNetworkingData, analyzeHostPotential } from './services/geminiService';
 import { AnalysisResult, AppView, AppMode } from './types';
-import { Network, Moon, Sun, Key, AlertCircle } from 'lucide-react';
+import { Network, Moon, Sun, AlertCircle } from 'lucide-react';
 import { LOGO_URL } from './constants';
 
 const LOADING_MESSAGES = [
@@ -24,18 +24,6 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
-  const [isKeySelected, setIsKeySelected] = useState(true);
-
-  useEffect(() => {
-    const checkKey = async () => {
-      const aistudio = (window as any).aistudio;
-      if (aistudio) {
-        const hasKey = await aistudio.hasSelectedApiKey();
-        setIsKeySelected(hasKey);
-      }
-    };
-    checkKey();
-  }, []);
 
   useEffect(() => {
     if (isDarkMode) document.documentElement.classList.add('dark');
@@ -52,15 +40,6 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [view]);
 
-  const handleSelectKey = async () => {
-    const aistudio = (window as any).aistudio;
-    if (aistudio) {
-      await aistudio.openSelectKey();
-      setIsKeySelected(true);
-      setError(null);
-    }
-  };
-
   const handleRunAnalysis = async (action: () => Promise<AnalysisResult>) => {
     setView(AppView.ANALYZING);
     setError(null);
@@ -70,12 +49,7 @@ const App: React.FC = () => {
       setView(AppView.RESULTS);
     } catch (err: any) {
       console.error("Analysis Error:", err);
-      if (err.message?.includes("entity was not found") || err.message?.includes("404") || err.message === "API_KEY_MISSING") {
-        setIsKeySelected(false);
-        setError("Problema com a Chave de API. Por favor, selecione-a novamente.");
-      } else {
-        setError("Erro na análise. Verifique se os dados estão corretos e tente novamente.");
-      }
+      setError("Erro na análise. Verifique se os dados estão corretos e se há conexão com a internet.");
       setView(AppView.INPUT);
     }
   };
@@ -90,11 +64,6 @@ const App: React.FC = () => {
             <span className="font-black text-xl tracking-tighter">IN</span>
           </div>
           <div className="flex items-center gap-3">
-            {!isKeySelected && (
-              <button onClick={handleSelectKey} className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[10px] font-black uppercase shadow-lg animate-pulse">
-                <Key className="w-3 h-3 inline mr-1" /> Reconfigurar
-              </button>
-            )}
             <button onClick={() => setIsDarkMode(!isDarkMode)} className={`p-2 rounded-full transition-all active:scale-90 ${isDarkMode ? 'bg-gray-800 text-yellow-400' : 'bg-gray-100 text-gray-600'}`}>
               {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
@@ -103,14 +72,6 @@ const App: React.FC = () => {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8 flex-grow w-full">
-        {!isKeySelected && view !== AppView.RESULTS && (
-          <div className="mb-8 p-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-3xl text-center animate-fade-in">
-            <h3 className="text-amber-800 dark:text-amber-400 font-black uppercase text-xs mb-2">Conexão Necessária</h3>
-            <p className="text-amber-700 dark:text-amber-300 text-[11px] mb-4">Para usar a IA gratuita, você precisa selecionar sua chave do Google AI Studio.</p>
-            <button onClick={handleSelectKey} className="px-8 py-3 bg-amber-600 text-white font-black rounded-2xl text-xs hover:bg-amber-700 transition-all shadow-xl">SELECIONAR CHAVE AGORA</button>
-          </div>
-        )}
-
         {error && (
           <div className="mb-8 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-400 rounded-2xl flex items-center gap-3 animate-slide-up">
             <AlertCircle className="w-5 h-5 shrink-0" />
