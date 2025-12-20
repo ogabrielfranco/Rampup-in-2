@@ -175,11 +175,11 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
     return map;
   }, [data.participants]);
 
-  // Consolidamos as conexões: tanto quem ele indica quanto quem indica ele
+  // Unificação de conexões com inversão de tipo (Compra <-> Venda) para visualização completa
   const unifiedConnectionsMap = useMemo(() => {
     const map = new Map<string, { partnerId: string; score: number; reason: string; synergyType?: string }[]>();
     
-    // Conexões que o participante sugere (Outbound)
+    // Outbound
     data.individualScores.forEach(score => {
       const list = map.get(score.participantId) || [];
       score.recommendedConnections?.forEach(conn => {
@@ -188,14 +188,12 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
       map.set(score.participantId, list);
     });
 
-    // Conexões que outros sugerem para o participante (Inbound)
+    // Inbound (Garantindo que todos tenham matches)
     data.individualScores.forEach(score => {
       score.recommendedConnections?.forEach(conn => {
         const targetId = conn.partnerId;
         const list = map.get(targetId) || [];
-        // Evita duplicidade se o Gemini já mapeou bidirecional
         if (!list.find(l => l.partnerId === score.participantId)) {
-          // Quando é inbound, o tipo de sinergia inverte (quem compra vira vendedor para o alvo)
           let invertedType = conn.synergyType;
           if (conn.synergyType === 'COMPRA') invertedType = 'VENDA';
           else if (conn.synergyType === 'VENDA') invertedType = 'COMPRA';
@@ -203,7 +201,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
           list.push({ 
             partnerId: score.participantId, 
             score: conn.score, 
-            reason: `Oportunidade Recíproca: ${conn.reason}`,
+            reason: `Sinergia de Ecossistema: ${conn.reason}`,
             synergyType: invertedType
           });
         }
@@ -326,7 +324,6 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 md:space-y-8 animate-fade-in mb-20 px-4 md:px-0">
-      {/* Header */}
       <div className={`flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b pb-8 ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`}>
         <div>
            <button onClick={onReset} className="text-[10px] font-black uppercase text-gray-400 hover:text-emerald-600 mb-2 flex items-center gap-2 transition-all group">
@@ -343,7 +340,6 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ data, onReset, isDarkMode }
         </div>
       </div>
 
-      {/* Tabs */}
       <div className={`flex p-1.5 rounded-2xl w-full border shadow-sm sticky top-[72px] z-50 ${isDarkMode ? 'bg-chumbo-950/90 border-gray-800' : 'bg-gray-100/90 border-gray-200'} backdrop-blur-md`}>
           {(['overview', 'matches', 'list', 'room'] as const).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-all ${activeTab === tab ? 'bg-emerald-600 text-white shadow-lg' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}>

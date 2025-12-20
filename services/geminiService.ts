@@ -111,7 +111,7 @@ const analysisSchema = {
 
 export const analyzeNetworkingData = async (rawData: string): Promise<AnalysisResult> => {
   const prompt = `
-    📑 MEGA PROMPT: ENGENHARIA DE ECOSSISTEMAS E INTELIGÊNCIA DE NETWORKING
+    📑 MEGA PROMPT SUPREMO: ENGENHARIA DE ECOSSISTEMAS E INTELIGÊNCIA DE NETWORKING
 
     ATUAÇÃO:
     Você é um AI Master em Business Intelligence, Analista de Dados e Engenheiro de Ecossistemas B2B. Sua especialidade é a Teoria dos Grafos aplicada a negócios, identificando fluxos de capital e autoridade dentro de redes fechadas de networking.
@@ -121,26 +121,25 @@ export const analyzeNetworkingData = async (rawData: string): Promise<AnalysisRe
 
     1. MODELO MATEMÁTICO (ÍNDICE DE NEGÓCIO - IN)
     Calcule o IN de cada participante em uma escala de 1 a 100, utilizando a seguinte equação ponderada:
-    IN = (E * 0.50) + (P * 0.30) + (D * 0.20)
+    $$IN = (E \cdot 0.50) + (P \cdot 0.30) + (D \cdot 0.20)$$
     Onde:
-    - E (Essencialidade - 50%): Grau de necessidade do serviço para a operação dos outros membros (ex: Jurídico, Contabilidade, TI, RH).
-    - P (Poder de Indicação - 30%): Posição do negócio no início da jornada de compra (ex: Imobiliária que indica reforma, Branding que indica marketing).
+    - E (Essencialidade - 50%): Grau de necessidade do serviço para a sobrevivência/operação dos outros membros (ex: Jurídico, Contabilidade, TI, RH).
+    - P (Poder de Indicação - 30%): Posição do negócio no "topo do funil" ou início da jornada de compra (ex: Imobiliária que indica reforma, Branding que indica marketing).
     - D (Densidade de Conexão - 20%): Potencial quantitativo de parcerias transversais detectadas na lista atual.
 
     2. PROTOCOLO DE ANÁLISE DE ECOSSISTEMA
-    Para cada membro, aplique quatro filtros lógicos:
     - Mapeamento de Cadeia de Valor: Identifique fornecedor potencial e comprador direto.
-    - Hubs de Sinergia: Agrupe por 'Público-Alvo Compartilhado' (quem vende para o mesmo perfil de cliente).
-    - Pontes de Inovação: Como empresas de Tecnologia/Consultoria podem otimizar as tradicionais da lista.
-    - Análise de Autoridade e Mídia: Conectar canais de divulgação a quem possui alto valor de produto mas baixa visibilidade.
+    - Hubs de Sinergia: Agrupe por 'Público-Alvo Compartilhado'.
+    - Pontes de Inovação: Como empresas de Tecnologia/Consultoria podem otimizar as empresas tradicionais.
+    - Análise de Autoridade e Mídia: Conecte detentores de canais a quem possui produto mas baixa visibilidade.
 
     3. REGRAS CRÍTICAS DE EXECUÇÃO
-    - Classificação de Sinergia: Para cada conexão sugerida, você DEVE classificar como 'COMPRA' (o participante pode comprar do parceiro), 'VENDA' (o participante pode vender para o parceiro) ou 'PARCERIA' (sinergia estratégica ou público-alvo compartilhado).
     - Regra do Score Alto: É terminantemente PROIBIDO um participante ter IN > 80 sem listar pelo menos 3 conexões recomendadas específicas.
-    - Visão do Host: O Host deve ser tratado como um nó estratégico, mapeando como ele ancora a rede.
-    - Mapeamento Total: Nenhum participante pode ficar "isolado"; todos devem ter pelo menos uma sinergia de compra, venda ou indicação mapeada.
+    - Sinergia Classificada: Cada recomendação DEVE ser marcada como 'COMPRA', 'VENDA' ou 'PARCERIA'.
+    - Visão do Host: O Host deve ser tratado como um nó estratégico.
+    - Mapeamento Total: Nenhum participante pode ficar "isolado"; todos devem ter pelo menos uma sinergia mapeada.
 
-    DADOS DOS PARTICIPANTES:
+    DADOS:
     ${rawData}
   `;
   return callGemini(prompt);
@@ -148,24 +147,17 @@ export const analyzeNetworkingData = async (rawData: string): Promise<AnalysisRe
 
 export const analyzeHostPotential = async (hostsData: string, participantsData: string): Promise<AnalysisResult> => {
     const prompt = `
-      📑 MEGA PROMPT: ENGENHARIA DE ECOSSISTEMAS - FOCO NO ANFITRIÃO (HOST)
+      📑 MEGA PROMPT SUPREMO: ANÁLISE DE ECOSSISTEMA COM FOCO NO HOST
 
-      ATUAÇÃO: AI Master em Business Intelligence e Engenheiro de Ecossistemas.
-  
-      MISSÃO:
-      Analisar o ecossistema focando no Host como o âncora principal, mas sem ignorar as sinergias transversais entre os convidados.
-      
-      MODELO MATEMÁTICO (IN):
-      Utilize a equação IN = (E * 0.50) + (P * 0.30) + (D * 0.20) aplicada à realidade do Host e do grupo.
+      Utilize a lógica matemática de Grafos e a equação IN = (E * 0.50) + (P * 0.30) + (D * 0.20) para mapear o valor de cada convidado em relação ao Host e ao ecossistema total.
       
       REGRAS:
-      - Classificação de Sinergia: Classifique cada recomendação como 'COMPRA', 'VENDA' ou 'PARCERIA'.
-      - Regra do Score Alto: Participantes com IN > 80 devem ter sinergias detalhadas.
-      - Mapeamento Total: Todos os convidados devem ter conexões sugeridas (compra, venda ou indicação).
-      - Nenhum participante de alto valor (como construtoras ou investidores) pode ficar isolado.
+      - Classifique sinergias como 'COMPRA', 'VENDA' ou 'PARCERIA'.
+      - Mapeamento Total: Todos os convidados devem ter conexões.
+      - Host é o âncora, mas as sinergias entre convidados também importam.
 
-      DADOS DO HOST: ${hostsData}
-      LISTA DE CONVIDADOS: ${participantsData}
+      HOST(S): ${hostsData}
+      CONVIDADOS: ${participantsData}
     `;
     return callGemini(prompt);
 };
@@ -187,7 +179,7 @@ const callGemini = async (prompt: string): Promise<AnalysisResult> => {
         if (!jsonText) throw new Error("Sem resposta da IA");
         return JSON.parse(jsonText) as AnalysisResult;
       } catch (error) {
-        console.error("Erro na análise Gemini:", error);
+        console.error("Erro na análise estratégica:", error);
         throw new Error("Erro ao processar inteligência estratégica.");
       }
 };
