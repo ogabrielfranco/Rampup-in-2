@@ -1,6 +1,12 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult } from "../types";
+
+// Declarar process para o TypeScript não reclamar durante o build
+declare const process: {
+  env: {
+    API_KEY: string;
+  };
+};
 
 const modelName = "gemini-3-pro-preview";
 
@@ -163,9 +169,8 @@ export const analyzeHostPotential = async (hostsData: string, participantsData: 
 
 const callGemini = async (prompt: string): Promise<AnalysisResult> => {
     try {
-        // Initialize the client using process.env.API_KEY directly.
-        // Assume API_KEY is pre-configured and accessible.
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const apiKey = process.env.API_KEY;
+        const ai = new GoogleGenAI({ apiKey });
         const response = await ai.models.generateContent({
           model: modelName,
           contents: prompt,
